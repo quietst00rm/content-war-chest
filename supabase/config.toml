@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.recategorize-posts]
 verify_jwt = false
+
+[functions.format-post]
+verify_jwt = false
