@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Sparkles } from "lucide-react";
 import { CATEGORIES, getCategoryEmoji } from "@/lib/categories";
@@ -26,6 +27,7 @@ interface AnalyzedPost {
 }
 
 export const AddPostDialog = ({ open, onOpenChange, onSuccess }: AddPostDialogProps) => {
+  const { user } = useAuth();
   const [content, setContent] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzed, setAnalyzed] = useState<AnalyzedPost | null>(null);
@@ -60,7 +62,7 @@ export const AddPostDialog = ({ open, onOpenChange, onSuccess }: AddPostDialogPr
   };
 
   const handleSave = async () => {
-    if (!analyzed) return;
+    if (!analyzed || !user) return;
 
     try {
       const { error } = await supabase.from("posts").insert({
@@ -70,6 +72,7 @@ export const AddPostDialog = ({ open, onOpenChange, onSuccess }: AddPostDialogPr
         primary_category: analyzed.primary_category,
         tags: analyzed.tags,
         character_count: analyzed.character_count,
+        user_id: user.id,
       });
 
       if (error) throw error;

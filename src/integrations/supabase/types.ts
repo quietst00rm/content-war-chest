@@ -34,6 +34,7 @@ export type Database = {
           updated_at: string | null
           usage_count: number | null
           used_at: string | null
+          user_id: string | null
         }
         Insert: {
           character_count?: number | null
@@ -54,6 +55,7 @@ export type Database = {
           updated_at?: string | null
           usage_count?: number | null
           used_at?: string | null
+          user_id?: string | null
         }
         Update: {
           character_count?: number | null
@@ -74,6 +76,7 @@ export type Database = {
           updated_at?: string | null
           usage_count?: number | null
           used_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

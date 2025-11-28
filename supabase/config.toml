@@ -1,10 +1,10 @@
 project_id = "qzsvcqnylqgbzdahskcm"
 
 [functions.analyze-post]
-verify_jwt = false
+verify_jwt = true
 
 [functions.recategorize-posts]
-verify_jwt = false
+verify_jwt = true
 
 [functions.format-post]
-verify_jwt = false
+verify_jwt = true
