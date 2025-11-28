@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Copy, Check, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { Copy, Check, ChevronDown, ChevronUp, AlertTriangle, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { getCategoryEmoji, getCategoryStyle } from "@/lib/categories";
@@ -20,6 +20,7 @@ export const ExpandablePostCard = ({ post, onUpdate }: ExpandablePostCardProps) 
   const [copied, setCopied] = useState(false);
   const [notes, setNotes] = useState(post.notes || "");
   const [showNotes, setShowNotes] = useState(false);
+  const [isFormatting, setIsFormatting] = useState(false);
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -50,6 +51,44 @@ export const ExpandablePostCard = ({ post, onUpdate }: ExpandablePostCardProps) 
     onUpdate();
     toast({ title: "Notes saved" });
     setShowNotes(false);
+  };
+
+  const handleAutoFormat = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsFormatting(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('format-post', {
+        body: { content: post.content }
+      });
+
+      if (error) throw error;
+
+      const formattedContent = data.formatted_content;
+
+      await supabase
+        .from("posts")
+        .update({
+          content: formattedContent,
+          character_count: formattedContent.length
+        })
+        .eq("id", post.id);
+
+      onUpdate();
+      toast({
+        title: "✓ Post formatted!",
+        description: "Content updated successfully."
+      });
+    } catch (error: any) {
+      console.error('Auto-format error:', error);
+      toast({
+        title: "Formatting failed",
+        description: error.message || "Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsFormatting(false);
+    }
   };
 
   const categoryStyle = getCategoryStyle(post.primary_category);
@@ -132,17 +171,36 @@ export const ExpandablePostCard = ({ post, onUpdate }: ExpandablePostCardProps) 
       {expanded && (
         <div className="mt-4 space-y-3" onClick={(e) => e.stopPropagation()}>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={handleCopy} className="flex-1 min-h-[44px]">
+            <Button 
+              onClick={handleAutoFormat} 
+              variant="outline" 
+              className="flex-1 min-h-[44px] border-purple-500 text-purple-600 hover:bg-purple-50 dark:border-purple-400 dark:text-purple-400 dark:hover:bg-purple-950"
+              disabled={isFormatting}
+            >
+              {isFormatting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Formatting...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Auto-Format
+                </>
+              )}
+            </Button>
+            <Button onClick={handleCopy} className="flex-1 min-h-[44px]" disabled={isFormatting}>
               {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
               {copied ? "Copied!" : "Copy to Clipboard"}
             </Button>
-            <Button onClick={handleMarkAsUsed} variant="secondary" className="flex-1 min-h-[44px]">
+            <Button onClick={handleMarkAsUsed} variant="secondary" className="flex-1 min-h-[44px]" disabled={isFormatting}>
               {post.is_used ? "Mark as Unused" : "Mark as Used"}
             </Button>
             <Button
               onClick={() => setShowNotes(!showNotes)}
               variant="secondary"
               className="min-h-[44px]"
+              disabled={isFormatting}
             >
               {showNotes ? "Hide Note" : "Add Note"}
             </Button>
