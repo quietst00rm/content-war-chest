@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 interface MobileFilterSheetProps {
   categories: string[];
   tags: string[];
+  posts: any[];
   selectedCategory: string | null;
   selectedTags: string[];
   filterUsed: "all" | "used" | "unused";
@@ -24,6 +25,7 @@ interface MobileFilterSheetProps {
 export const MobileFilterSheet = ({
   categories,
   tags,
+  posts,
   selectedCategory,
   selectedTags,
   filterUsed,
@@ -59,6 +61,7 @@ export const MobileFilterSheet = ({
           <FilterSidebar
             categories={categories}
             tags={tags}
+            posts={posts}
             selectedCategory={selectedCategory}
             selectedTags={selectedTags}
             filterUsed={filterUsed}
