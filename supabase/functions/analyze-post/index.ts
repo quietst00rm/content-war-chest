@@ -5,6 +5,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, options);
+    
+    // Retry on 503 Service Unavailable
+    if (response.status === 503 && attempt < maxRetries) {
+      const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
+      console.log(`AI gateway unavailable (503), retry ${attempt}/${maxRetries - 1} in ${delay}ms`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      continue;
+    }
+    
+    return response;
+  }
+  
+  throw new Error('Max retries exceeded');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -46,7 +64,7 @@ Your response MUST be valid JSON with this exact structure:
   "summary": "One sentence summary of the main message"
 }`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetchWithRetry('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${LOVABLE_API_KEY}`,
@@ -77,6 +95,13 @@ Your response MUST be valid JSON with this exact structure:
         return new Response(
           JSON.stringify({ error: 'Payment required. Please add credits to your workspace.' }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (response.status === 503) {
+        return new Response(
+          JSON.stringify({ error: 'AI service temporarily unavailable. Please try again in a moment.' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
