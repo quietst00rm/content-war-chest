@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { DashboardStats } from "@/components/content-library/DashboardStats";
 import { SearchBar } from "@/components/content-library/SearchBar";
 import { FilterSidebar } from "@/components/content-library/FilterSidebar";
 import { MobileFilterSheet } from "@/components/content-library/MobileFilterSheet";
 import { PostGrid } from "@/components/content-library/PostGrid";
 import { AddPostDialog } from "@/components/content-library/AddPostDialog";
 import { BulkImportDialog } from "@/components/content-library/BulkImportDialog";
+import { RecategorizeButton } from "@/components/content-library/RecategorizeButton";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Upload, Grid3x3, List } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { CATEGORIES } from "@/lib/categories";
 
 export interface Post {
   id: string;
@@ -41,6 +43,8 @@ const Index = () => {
   const [filterUsed, setFilterUsed] = useState<"all" | "used" | "unused">("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showBulkImportDialog, setShowBulkImportDialog] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortBy, setSortBy] = useState<"category" | "title">("category");
 
   const { data: posts = [], isLoading, refetch } = useQuery({
     queryKey: ["posts", searchQuery, selectedCategory, selectedTags, filterUsed],
@@ -74,58 +78,107 @@ const Index = () => {
     },
   });
 
-  // Get unique categories and tags
-  const categories = Array.from(new Set(posts.map((p) => p.primary_category))).sort();
+  // Get unique categories and tags from CATEGORIES constant
+  const categories = CATEGORIES.map((c) => c.name);
   const allTags = Array.from(new Set(posts.flatMap((p) => p.tags || []))).sort();
+
+  // Calculate stats
+  const totalPosts = posts.length;
+  const usedPosts = posts.filter((p) => p.is_used).length;
+  const unusedPosts = totalPosts - usedPosts;
+  const filteredCount = posts.length;
+
+  // Apply sorting
+  const sortedPosts = [...posts].sort((a, b) => {
+    if (sortBy === "category") {
+      return a.primary_category.localeCompare(b.primary_category);
+    } else {
+      return a.title.localeCompare(b.title);
+    }
+  });
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-4 sm:p-6">
         {/* Header */}
-        <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
-              LinkedIn Content Library
-            </h1>
-            <p className="mt-2 text-sm sm:text-base text-muted-foreground">
-              AI-powered content management for your LinkedIn posts
-            </p>
-          </div>
-          <div className="flex gap-2 items-center">
-            <ThemeToggle />
-            <Button
-              onClick={() => setShowBulkImportDialog(true)}
-              variant="outline"
-              size="lg"
-              className="hidden sm:flex"
-            >
-              <Upload className="mr-2 h-5 w-5" />
-              Bulk Import
-            </Button>
-            <Button
-              onClick={() => setShowBulkImportDialog(true)}
-              variant="outline"
-              size="icon"
-              className="sm:hidden min-h-[44px] min-w-[44px]"
-            >
-              <Upload className="h-5 w-5" />
-            </Button>
-            <Button onClick={() => setShowAddDialog(true)} size="lg" className="hidden sm:flex">
-              <Plus className="mr-2 h-5 w-5" />
-              Add New Post
-            </Button>
-            <Button
-              onClick={() => setShowAddDialog(true)}
-              size="icon"
-              className="sm:hidden min-h-[44px] min-w-[44px]"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-2">
+            <div>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-1">
+                LinkedIn Content Library
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {totalPosts} posts • {usedPosts} used • {unusedPosts} ready to publish • {filteredCount} showing
+              </p>
+            </div>
+            <div className="flex gap-2 items-center flex-wrap">
+              <RecategorizeButton onComplete={refetch} />
+              
+              {/* Sort Dropdown */}
+              <Select value={sortBy} onValueChange={(value: "category" | "title") => setSortBy(value)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="category">By Category</SelectItem>
+                  <SelectItem value="title">By Title (A-Z)</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* View Toggle */}
+              <div className="flex gap-1 border rounded-md p-1">
+                <Button
+                  variant={viewMode === "grid" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                  className="px-3"
+                >
+                  <Grid3x3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                  className="px-3"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <ThemeToggle />
+              
+              <Button
+                onClick={() => setShowBulkImportDialog(true)}
+                variant="outline"
+                size="default"
+                className="hidden sm:flex"
+              >
+                <Upload className="mr-2 h-5 w-5" />
+                Bulk Import
+              </Button>
+              <Button
+                onClick={() => setShowBulkImportDialog(true)}
+                variant="outline"
+                size="icon"
+                className="sm:hidden min-h-[44px] min-w-[44px]"
+              >
+                <Upload className="h-5 w-5" />
+              </Button>
+              
+              <Button onClick={() => setShowAddDialog(true)} size="default" className="hidden sm:flex">
+                <Plus className="mr-2 h-5 w-5" />
+                Add New Post
+              </Button>
+              <Button
+                onClick={() => setShowAddDialog(true)}
+                size="icon"
+                className="sm:hidden min-h-[44px] min-w-[44px]"
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </div>
-
-        {/* Dashboard Stats */}
-        <DashboardStats posts={posts} />
 
         {/* Search */}
         <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
@@ -161,7 +214,7 @@ const Index = () => {
           </div>
 
           {/* Posts Grid */}
-          <PostGrid posts={posts} isLoading={isLoading} onUpdate={refetch} />
+          <PostGrid posts={sortedPosts} isLoading={isLoading} onUpdate={refetch} viewMode={viewMode} />
         </div>
 
         {/* Add Post Dialog */}

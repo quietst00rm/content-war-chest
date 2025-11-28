@@ -42,26 +42,25 @@ serve(async (req) => {
 
 Analyze the provided LinkedIn post and return structured metadata in JSON format.
 
-Categories to choose from:
-- Amazon Suspensions & Appeals
-- Business Philosophy & Mindset
-- Competitor Attacks & Black Hat
-- Amazon Policies & Rules
-- Seller Strategies & Tips
-- Personal Stories & Anecdotes
-- Customer Service & Returns
-- Product Selection & Sourcing
-- Amazon Business Model & Data
-- Platform Features & Changes
+Categories (choose exactly ONE):
+- Account Health (enforcement actions, suspensions, account health scores, monitoring, risk management frameworks)
+- Writing & Appeals (POA writing, appeal strategy, appeal psychology, reinstatement tactics)
+- Amazon Ecosystem (Amazon's business model, platform dynamics, badges, search, future predictions)
+- Competition & Attacks (competitor sabotage, hijacking, fake reviews, attack response, defense)
+- Documentation & Compliance (invoices, supply chain verification, record keeping, document quality)
+- Product Strategy (product selection, high-risk categories, focus vs scale)
+- Operations & Logistics (FBA, shipping, inventory disputes, warehouse issues)
+- Reviews & Feedback (review system, review manipulation, ratings)
+- Business Models (sourcing methods, retail arbitrage, new seller reality)
+- Mindset & Strategy (business philosophy, seller psychology, archetypes, networking)
+- Personal Story (origin stories, cautionary tales, success stories, human connection)
+- Buyer Behavior (ethics, consumer impact, refund abuse)
 
 Your response MUST be valid JSON with this exact structure:
 {
   "title": "Concise descriptive title (5-10 words)",
   "primary_category": "One of the categories listed above",
-  "subcategory": "Specific topic within the category",
-  "tags": ["3-5 relevant searchable tags"],
-  "target_audience": "Who this post is for (e.g., New Sellers, Suspended Sellers, etc.)",
-  "summary": "One sentence summary of the main message"
+  "tags": ["3-5 relevant searchable tags"]
 }`;
 
     const response = await fetchWithRetry('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -121,7 +120,7 @@ Your response MUST be valid JSON with this exact structure:
 
     const metadata = JSON.parse(jsonMatch[0]);
 
-    // Format the content for LinkedIn
+    // Format the content for LinkedIn (preserve line breaks)
     const formattedContent = formatForLinkedIn(content);
 
     return new Response(
