@@ -1,11 +1,5 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -105,16 +99,14 @@ export const AddPostDialog = ({ open, onOpenChange, onSuccess }: AddPostDialogPr
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add New LinkedIn Post</DialogTitle>
-          <DialogDescription>
-            Paste your LinkedIn post content and let AI analyze and categorize it.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-6">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={handleClose}
+      title="Add New LinkedIn Post"
+      description="Paste your LinkedIn post content and let AI analyze and categorize it."
+      className="max-w-3xl"
+    >
+      <div className="space-y-4 sm:space-y-6">
           {/* Content Input */}
           <div>
             <Label htmlFor="content">Post Content</Label>
@@ -130,7 +122,7 @@ export const AddPostDialog = ({ open, onOpenChange, onSuccess }: AddPostDialogPr
           </div>
 
           {!analyzed ? (
-            <Button onClick={handleAnalyze} disabled={analyzing} className="w-full">
+            <Button onClick={handleAnalyze} disabled={analyzing} className="w-full min-h-[44px]">
               {analyzing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -214,8 +206,8 @@ export const AddPostDialog = ({ open, onOpenChange, onSuccess }: AddPostDialogPr
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2">
-                <Button onClick={handleSave} className="flex-1">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={handleSave} className="flex-1 min-h-[44px]">
                   Save to Library
                 </Button>
                 <Button
@@ -224,6 +216,7 @@ export const AddPostDialog = ({ open, onOpenChange, onSuccess }: AddPostDialogPr
                     setAnalyzed(null);
                     setEditMode(false);
                   }}
+                  className="min-h-[44px]"
                 >
                   Re-analyze
                 </Button>
@@ -231,7 +224,6 @@ export const AddPostDialog = ({ open, onOpenChange, onSuccess }: AddPostDialogPr
             </>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };

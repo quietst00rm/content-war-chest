@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { DashboardStats } from "@/components/content-library/DashboardStats";
 import { SearchBar } from "@/components/content-library/SearchBar";
 import { FilterSidebar } from "@/components/content-library/FilterSidebar";
+import { MobileFilterSheet } from "@/components/content-library/MobileFilterSheet";
 import { PostGrid } from "@/components/content-library/PostGrid";
 import { AddPostDialog } from "@/components/content-library/AddPostDialog";
 import { BulkImportDialog } from "@/components/content-library/BulkImportDialog";
@@ -79,24 +80,46 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-4 sm:p-6">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-foreground">LinkedIn Content Library</h1>
-            <p className="mt-2 text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
+              LinkedIn Content Library
+            </h1>
+            <p className="mt-2 text-sm sm:text-base text-muted-foreground">
               AI-powered content management for your LinkedIn posts
             </p>
           </div>
           <div className="flex gap-2 items-center">
             <ThemeToggle />
-            <Button onClick={() => setShowBulkImportDialog(true)} variant="outline" size="lg">
+            <Button
+              onClick={() => setShowBulkImportDialog(true)}
+              variant="outline"
+              size="lg"
+              className="hidden sm:flex"
+            >
               <Upload className="mr-2 h-5 w-5" />
               Bulk Import
             </Button>
-            <Button onClick={() => setShowAddDialog(true)} size="lg">
+            <Button
+              onClick={() => setShowBulkImportDialog(true)}
+              variant="outline"
+              size="icon"
+              className="sm:hidden min-h-[44px] min-w-[44px]"
+            >
+              <Upload className="h-5 w-5" />
+            </Button>
+            <Button onClick={() => setShowAddDialog(true)} size="lg" className="hidden sm:flex">
               <Plus className="mr-2 h-5 w-5" />
               Add New Post
+            </Button>
+            <Button
+              onClick={() => setShowAddDialog(true)}
+              size="icon"
+              className="sm:hidden min-h-[44px] min-w-[44px]"
+            >
+              <Plus className="h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -107,10 +130,9 @@ const Index = () => {
         {/* Search */}
         <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
-        {/* Main Content Area */}
-        <div className="mt-8 grid gap-6 lg:grid-cols-[280px_1fr]">
-          {/* Sidebar */}
-          <FilterSidebar
+        {/* Mobile Filter Button */}
+        <div className="mt-4 lg:hidden">
+          <MobileFilterSheet
             categories={categories}
             tags={allTags}
             selectedCategory={selectedCategory}
@@ -120,6 +142,23 @@ const Index = () => {
             onTagsChange={setSelectedTags}
             onUsedFilterChange={setFilterUsed}
           />
+        </div>
+
+        {/* Main Content Area */}
+        <div className="mt-6 sm:mt-8 grid gap-6 lg:grid-cols-[280px_1fr]">
+          {/* Desktop Sidebar */}
+          <div className="hidden lg:block">
+            <FilterSidebar
+              categories={categories}
+              tags={allTags}
+              selectedCategory={selectedCategory}
+              selectedTags={selectedTags}
+              filterUsed={filterUsed}
+              onCategoryChange={setSelectedCategory}
+              onTagsChange={setSelectedTags}
+              onUsedFilterChange={setFilterUsed}
+            />
+          </div>
 
           {/* Posts Grid */}
           <PostGrid posts={posts} isLoading={isLoading} onUpdate={refetch} />

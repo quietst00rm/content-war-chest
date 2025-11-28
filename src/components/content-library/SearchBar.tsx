@@ -12,10 +12,10 @@ export const SearchBar = ({ searchQuery, onSearchChange }: SearchBarProps) => {
       <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
       <Input
         type="text"
-        placeholder="Search posts by title, content, or tags..."
+        placeholder="Search posts..."
         value={searchQuery}
         onChange={(e) => onSearchChange(e.target.value)}
-        className="pl-10 h-12 text-base"
+        className="pl-10 h-12 text-sm sm:text-base"
       />
     </div>
   );

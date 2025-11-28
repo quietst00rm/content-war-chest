@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,23 +51,22 @@ export const PostDetailDialog = ({ post, open, onOpenChange, onUpdate }: PostDet
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-start justify-between">
-            <DialogTitle className="text-2xl pr-8">{post.title}</DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleFavorite}
-              className={post.is_favorite ? "text-yellow-500" : ""}
-            >
-              <Star className={`h-5 w-5 ${post.is_favorite ? "fill-current" : ""}`} />
-            </Button>
-          </div>
-        </DialogHeader>
-
-        <div className="space-y-6">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange} className="max-w-4xl">
+      <div className="space-y-4 sm:space-y-6">
+        {/* Title and Favorite */}
+        <div className="flex items-start justify-between gap-4">
+          <h2 className="text-xl sm:text-2xl font-semibold">{post.title}</h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleFavorite}
+            className={`min-h-[44px] min-w-[44px] flex-shrink-0 ${
+              post.is_favorite ? "text-yellow-500" : ""
+            }`}
+          >
+            <Star className={`h-5 w-5 ${post.is_favorite ? "fill-current" : ""}`} />
+          </Button>
+        </div>
           {/* Metadata */}
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary" className="text-sm">
@@ -93,52 +87,52 @@ export const PostDetailDialog = ({ post, open, onOpenChange, onUpdate }: PostDet
             </div>
           )}
 
-          {/* Formatted Content Preview */}
-          <div>
-            <h4 className="font-semibold mb-2">LinkedIn-Formatted Content</h4>
-            <div className="bg-muted p-4 rounded-lg whitespace-pre-wrap font-mono text-sm">
-              {post.formatted_content}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-2">
-            <Button onClick={handleCopy} className="flex-1">
-              {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-              {copied ? "Copied!" : "Copy to Clipboard"}
-            </Button>
-            {!post.is_used && (
-              <Button onClick={handleMarkAsUsed} variant="secondary">
-                Mark as Used
-              </Button>
-            )}
-          </div>
-
-          {/* Notes */}
-          <div>
-            <h4 className="font-semibold mb-2">Notes</h4>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add notes about this post..."
-              rows={4}
-            />
-            <Button onClick={handleSaveNotes} className="mt-2" size="sm">
-              Save Notes
-            </Button>
-          </div>
-
-          {/* Metadata Footer */}
-          <div className="text-sm text-muted-foreground space-y-1">
-            {post.target_audience && <p>Target Audience: {post.target_audience}</p>}
-            {post.character_count && <p>Character Count: {post.character_count}</p>}
-            {post.is_used && post.used_at && (
-              <p>Used: {new Date(post.used_at).toLocaleDateString()}</p>
-            )}
-            <p>Usage Count: {post.usage_count}</p>
+        {/* Formatted Content Preview */}
+        <div>
+          <h4 className="font-semibold mb-2 text-sm sm:text-base">LinkedIn-Formatted Content</h4>
+          <div className="bg-muted p-3 sm:p-4 rounded-lg whitespace-pre-wrap font-mono text-xs sm:text-sm max-h-[40vh] overflow-y-auto">
+            {post.formatted_content}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button onClick={handleCopy} className="flex-1 min-h-[44px]">
+            {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+            {copied ? "Copied!" : "Copy to Clipboard"}
+          </Button>
+          {!post.is_used && (
+            <Button onClick={handleMarkAsUsed} variant="secondary" className="min-h-[44px]">
+              Mark as Used
+            </Button>
+          )}
+        </div>
+
+        {/* Notes */}
+        <div>
+          <h4 className="font-semibold mb-2 text-sm sm:text-base">Notes</h4>
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Add notes about this post..."
+            rows={4}
+            className="min-h-[88px]"
+          />
+          <Button onClick={handleSaveNotes} className="mt-2 min-h-[44px]" size="sm">
+            Save Notes
+          </Button>
+        </div>
+
+        {/* Metadata Footer */}
+        <div className="text-xs sm:text-sm text-muted-foreground space-y-1">
+          {post.target_audience && <p>Target Audience: {post.target_audience}</p>}
+          {post.character_count && <p>Character Count: {post.character_count}</p>}
+          {post.is_used && post.used_at && (
+            <p>Used: {new Date(post.used_at).toLocaleDateString()}</p>
+          )}
+          <p>Usage Count: {post.usage_count}</p>
+        </div>
+      </div>
+    </ResponsiveDialog>
   );
 };

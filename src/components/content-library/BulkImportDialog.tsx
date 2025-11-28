@@ -1,11 +1,5 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -111,17 +105,14 @@ export const BulkImportDialog = ({ open, onOpenChange, onSuccess }: BulkImportDi
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Bulk Import Posts</DialogTitle>
-          <DialogDescription>
-            Paste multiple posts separated by "Post X" markers. Each post will be analyzed with AI and
-            added to your library.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-6">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={handleClose}
+      title="Bulk Import Posts"
+      description='Paste multiple posts separated by "Post X" markers. Each post will be analyzed with AI and added to your library.'
+      className="max-w-3xl"
+    >
+      <div className="space-y-4 sm:space-y-6">
           <div>
             <Textarea
               value={content}
@@ -149,7 +140,11 @@ export const BulkImportDialog = ({ open, onOpenChange, onSuccess }: BulkImportDi
             </div>
           )}
 
-          <Button onClick={handleImport} disabled={importing || !content.trim()} className="w-full">
+          <Button
+            onClick={handleImport}
+            disabled={importing || !content.trim()}
+            className="w-full min-h-[44px]"
+          >
             {importing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -163,7 +158,6 @@ export const BulkImportDialog = ({ open, onOpenChange, onSuccess }: BulkImportDi
             )}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };
