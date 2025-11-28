@@ -42,11 +42,11 @@ export const FilterSidebar = ({
   const hasActiveFilters = selectedCategory || selectedTags.length > 0 || filterUsed !== "all";
 
   return (
-    <Card className="p-6 h-fit sticky top-6">
+    <Card className="p-4 sm:p-6 h-fit sticky top-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-lg">Filters</h3>
+        <h3 className="font-semibold text-base sm:text-lg">Filters</h3>
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters}>
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="min-h-[36px]">
             Clear All
           </Button>
         )}
@@ -61,7 +61,7 @@ export const FilterSidebar = ({
               key={status}
               variant={filterUsed === status ? "default" : "outline"}
               size="sm"
-              className="w-full justify-start"
+              className="w-full justify-start min-h-[44px]"
               onClick={() => onUsedFilterChange(status)}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -81,10 +81,10 @@ export const FilterSidebar = ({
               key={category}
               variant={selectedCategory === category ? "default" : "outline"}
               size="sm"
-              className="w-full justify-start text-left h-auto py-2 px-3"
+              className="w-full justify-start text-left h-auto py-3 px-3 min-h-[44px]"
               onClick={() => onCategoryChange(selectedCategory === category ? null : category)}
             >
-              <span className="truncate text-xs">{category}</span>
+              <span className="truncate text-xs sm:text-sm">{category}</span>
             </Button>
           ))}
         </div>
@@ -100,7 +100,7 @@ export const FilterSidebar = ({
             <Badge
               key={tag}
               variant={selectedTags.includes(tag) ? "default" : "outline"}
-              className="cursor-pointer"
+              className="cursor-pointer min-h-[32px] px-3 py-1.5 text-xs sm:text-sm"
               onClick={() => toggleTag(tag)}
             >
               {tag}
