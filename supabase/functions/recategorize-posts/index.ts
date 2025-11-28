@@ -72,12 +72,13 @@ Categories:
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-5-mini-2025-08-07',
+            model: 'gpt-4o-mini',
             messages: [
               { role: 'system', content: systemPrompt },
               { role: 'user', content: `Post content:\n${post.content}` }
             ],
-            max_completion_tokens: 50,
+            max_tokens: 50,
+            temperature: 0.3,
           }),
         });
 
