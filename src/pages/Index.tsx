@@ -10,6 +10,7 @@ import { BulkImportDialog } from "@/components/content-library/BulkImportDialog"
 import { Button } from "@/components/ui/button";
 import { Plus, Upload } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export interface Post {
   id: string;
@@ -87,7 +88,8 @@ const Index = () => {
               AI-powered content management for your LinkedIn posts
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <ThemeToggle />
             <Button onClick={() => setShowBulkImportDialog(true)} variant="outline" size="lg">
               <Upload className="mr-2 h-5 w-5" />
               Bulk Import
