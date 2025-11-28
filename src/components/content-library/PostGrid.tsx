@@ -1,13 +1,14 @@
-import { PostCard } from "./PostCard";
+import { ExpandablePostCard } from "./ExpandablePostCard";
 import type { Post } from "@/pages/Index";
 
 interface PostGridProps {
   posts: Post[];
   isLoading: boolean;
   onUpdate: () => void;
+  viewMode: "grid" | "list";
 }
 
-export const PostGrid = ({ posts, isLoading, onUpdate }: PostGridProps) => {
+export const PostGrid = ({ posts, isLoading, onUpdate, viewMode }: PostGridProps) => {
   if (isLoading) {
     return (
       <div className="grid gap-6 md:grid-cols-2">
@@ -27,9 +28,9 @@ export const PostGrid = ({ posts, isLoading, onUpdate }: PostGridProps) => {
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className={viewMode === "grid" ? "grid gap-6 md:grid-cols-2" : "flex flex-col gap-4"}>
       {posts.map((post) => (
-        <PostCard key={post.id} post={post} onUpdate={onUpdate} />
+        <ExpandablePostCard key={post.id} post={post} onUpdate={onUpdate} />
       ))}
     </div>
   );

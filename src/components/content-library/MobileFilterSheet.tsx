@@ -39,11 +39,13 @@ export const MobileFilterSheet = ({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" size="lg" className="w-full lg:hidden relative">
-          <SlidersHorizontal className="mr-2 h-5 w-5" />
-          Filters
+        <Button variant="outline" className="w-full justify-between min-h-[44px]">
+          <span className="flex items-center gap-2">
+            <SlidersHorizontal className="h-4 w-4" />
+            Filters
+          </span>
           {activeFilterCount > 0 && (
-            <Badge className="ml-2 h-5 min-w-[20px] rounded-full px-1">
+            <Badge variant="default" className="ml-2">
               {activeFilterCount}
             </Badge>
           )}

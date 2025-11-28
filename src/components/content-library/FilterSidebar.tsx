@@ -2,7 +2,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { X } from "lucide-react";
+import { getCategoryColor, getCategoryEmoji, getCategoryStyle } from "@/lib/categories";
+import type { Post } from "@/pages/Index";
 
 interface FilterSidebarProps {
   categories: string[];
@@ -41,6 +42,9 @@ export const FilterSidebar = ({
 
   const hasActiveFilters = selectedCategory || selectedTags.length > 0 || filterUsed !== "all";
 
+  // Get top 20 tags by usage
+  const popularTags = tags.slice(0, 20);
+
   return (
     <Card className="p-4 sm:p-6 h-fit sticky top-6">
       <div className="flex items-center justify-between mb-4">
@@ -54,7 +58,7 @@ export const FilterSidebar = ({
 
       {/* Status Filter */}
       <div className="mb-6">
-        <h4 className="text-sm font-medium mb-3">Status</h4>
+        <h4 className="text-sm font-medium mb-3 text-muted-foreground uppercase tracking-wide">Status</h4>
         <div className="space-y-2">
           {(["all", "unused", "used"] as const).map((status) => (
             <Button
@@ -74,37 +78,53 @@ export const FilterSidebar = ({
 
       {/* Categories */}
       <div className="mb-6">
-        <h4 className="text-sm font-medium mb-3">Categories</h4>
+        <h4 className="text-sm font-medium mb-3 text-muted-foreground uppercase tracking-wide">Categories</h4>
         <div className="space-y-2">
-          {categories.map((category) => (
-            <Button
-              key={category}
-              variant={selectedCategory === category ? "default" : "outline"}
-              size="sm"
-              className="w-full justify-start text-left h-auto py-3 px-3 min-h-[44px]"
-              onClick={() => onCategoryChange(selectedCategory === category ? null : category)}
-            >
-              <span className="truncate text-xs sm:text-sm">{category}</span>
-            </Button>
-          ))}
+          {categories.map((category) => {
+            const isSelected = selectedCategory === category;
+            const categoryStyle = getCategoryStyle(category, isSelected);
+            const emoji = getCategoryEmoji(category);
+
+            return (
+              <Button
+                key={category}
+                variant="outline"
+                size="sm"
+                className="w-full justify-between text-left h-auto py-3 px-3 min-h-[44px]"
+                style={isSelected ? {
+                  backgroundColor: categoryStyle.backgroundColor,
+                  borderColor: categoryStyle.borderColor,
+                  color: categoryStyle.color,
+                } : {}}
+                onClick={() => onCategoryChange(isSelected ? null : category)}
+              >
+                <span className="flex items-center gap-2 truncate text-xs sm:text-sm">
+                  <span>{emoji}</span>
+                  <span>{category}</span>
+                </span>
+                <Badge variant="secondary" className="ml-2">
+                  0
+                </Badge>
+              </Button>
+            );
+          })}
         </div>
       </div>
 
       <Separator className="my-4" />
 
-      {/* Tags */}
+      {/* Popular Tags */}
       <div>
-        <h4 className="text-sm font-medium mb-3">Tags</h4>
+        <h4 className="text-sm font-medium mb-3 text-muted-foreground uppercase tracking-wide">Popular Tags</h4>
         <div className="flex flex-wrap gap-2">
-          {tags.map((tag) => (
+          {popularTags.map((tag) => (
             <Badge
               key={tag}
               variant={selectedTags.includes(tag) ? "default" : "outline"}
-              className="cursor-pointer min-h-[32px] px-3 py-1.5 text-xs sm:text-sm"
+              className="cursor-pointer min-h-[32px] px-3 py-1.5 text-xs sm:text-sm hover:bg-accent"
               onClick={() => toggleTag(tag)}
             >
               {tag}
-              {selectedTags.includes(tag) && <X className="ml-1 h-3 w-3" />}
             </Badge>
           ))}
         </div>
