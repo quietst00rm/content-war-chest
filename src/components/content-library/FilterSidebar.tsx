@@ -8,6 +8,7 @@ import type { Post } from "@/pages/Index";
 interface FilterSidebarProps {
   categories: string[];
   tags: string[];
+  posts: Post[];
   selectedCategory: string | null;
   selectedTags: string[];
   filterUsed: "all" | "used" | "unused";
@@ -19,6 +20,7 @@ interface FilterSidebarProps {
 export const FilterSidebar = ({
   categories,
   tags,
+  posts,
   selectedCategory,
   selectedTags,
   filterUsed,
@@ -42,8 +44,25 @@ export const FilterSidebar = ({
 
   const hasActiveFilters = selectedCategory || selectedTags.length > 0 || filterUsed !== "all";
 
-  // Get top 20 tags by usage
-  const popularTags = tags.slice(0, 20);
+  // Calculate counts
+  const getCategoryCount = (category: string) => 
+    posts.filter(p => p.primary_category === category).length;
+
+  const allCount = posts.length;
+  const usedCount = posts.filter(p => p.is_used).length;
+  const unusedCount = allCount - usedCount;
+
+  // Get top 20 tags by usage frequency
+  const tagCounts = posts.flatMap(p => p.tags || [])
+    .reduce((acc, tag) => {
+      acc[tag] = (acc[tag] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const popularTags = Object.entries(tagCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 20)
+    .map(([tag]) => tag);
 
   return (
     <Card className="p-4 sm:p-6 h-fit sticky top-6">
@@ -60,17 +79,23 @@ export const FilterSidebar = ({
       <div className="mb-6">
         <h4 className="text-sm font-medium mb-3 text-muted-foreground uppercase tracking-wide">Status</h4>
         <div className="space-y-2">
-          {(["all", "unused", "used"] as const).map((status) => (
-            <Button
-              key={status}
-              variant={filterUsed === status ? "default" : "outline"}
-              size="sm"
-              className="w-full justify-start min-h-[44px]"
-              onClick={() => onUsedFilterChange(status)}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </Button>
-          ))}
+          {(["all", "unused", "used"] as const).map((status) => {
+            const count = status === "all" ? allCount : status === "used" ? usedCount : unusedCount;
+            return (
+              <Button
+                key={status}
+                variant={filterUsed === status ? "default" : "outline"}
+                size="sm"
+                className="w-full justify-between min-h-[44px]"
+                onClick={() => onUsedFilterChange(status)}
+              >
+                <span>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
+                <Badge variant="secondary" className="ml-2">
+                  {count}
+                </Badge>
+              </Button>
+            );
+          })}
         </div>
       </div>
 
@@ -84,6 +109,7 @@ export const FilterSidebar = ({
             const isSelected = selectedCategory === category;
             const categoryStyle = getCategoryStyle(category, isSelected);
             const emoji = getCategoryEmoji(category);
+            const count = getCategoryCount(category);
 
             return (
               <Button
@@ -103,7 +129,7 @@ export const FilterSidebar = ({
                   <span>{category}</span>
                 </span>
                 <Badge variant="secondary" className="ml-2">
-                  0
+                  {count}
                 </Badge>
               </Button>
             );

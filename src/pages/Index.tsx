@@ -46,6 +46,19 @@ const Index = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"category" | "title">("category");
 
+  // Fetch all posts for sidebar counts
+  const { data: allPosts = [] } = useQuery({
+    queryKey: ["all-posts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as Post[];
+    },
+  });
+
   const { data: posts = [], isLoading, refetch } = useQuery({
     queryKey: ["posts", searchQuery, selectedCategory, selectedTags, filterUsed],
     queryFn: async () => {
@@ -78,13 +91,13 @@ const Index = () => {
     },
   });
 
-  // Get unique categories and tags from CATEGORIES constant
+  // Get unique categories and tags from ALL posts
   const categories = CATEGORIES.map((c) => c.name);
-  const allTags = Array.from(new Set(posts.flatMap((p) => p.tags || []))).sort();
+  const allTags = Array.from(new Set(allPosts.flatMap((p) => p.tags || []))).sort();
 
-  // Calculate stats
-  const totalPosts = posts.length;
-  const usedPosts = posts.filter((p) => p.is_used).length;
+  // Calculate stats from all posts
+  const totalPosts = allPosts.length;
+  const usedPosts = allPosts.filter((p) => p.is_used).length;
   const unusedPosts = totalPosts - usedPosts;
   const filteredCount = posts.length;
 
@@ -188,6 +201,7 @@ const Index = () => {
           <MobileFilterSheet
             categories={categories}
             tags={allTags}
+            posts={allPosts}
             selectedCategory={selectedCategory}
             selectedTags={selectedTags}
             filterUsed={filterUsed}
@@ -204,6 +218,7 @@ const Index = () => {
             <FilterSidebar
               categories={categories}
               tags={allTags}
+              posts={allPosts}
               selectedCategory={selectedCategory}
               selectedTags={selectedTags}
               filterUsed={filterUsed}
