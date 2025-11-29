@@ -9,7 +9,7 @@ export const ThemeToggle = () => {
       variant="outline"
       size="default"
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="gap-2"
+      className="gap-2 min-h-[44px] px-3"
     >
       <span className="text-base">{theme === "dark" ? "🌙" : "☀️"}</span>
       <span className="hidden sm:inline">{theme === "dark" ? "Dark" : "Light"}</span>

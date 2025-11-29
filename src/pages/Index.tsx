@@ -121,20 +121,29 @@ const Index = () => {
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-2">
             <div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1">
-                <span className="bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent">LinkedIn</span>
-                <span className="text-foreground"> War Chest</span>
+              {/* Main heading with premium SaaS typography - authoritative and strategic */}
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight mb-2">
+                <span className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 bg-clip-text text-transparent drop-shadow-sm">
+                  Content War Chest
+                </span>
               </h1>
-              <p className="text-sm text-muted-foreground">
+              {/* Subtitle with post statistics - visually subordinate to main heading */}
+              <p className="text-sm text-muted-foreground tracking-wide">
                 {totalPosts} posts • {usedPosts} used • {unusedPosts} ready to publish • {filteredCount} showing
               </p>
             </div>
-            <div className="flex gap-2 items-center flex-wrap">
+            {/*
+              Header action buttons with proper spacing to prevent icon overlap.
+              Using gap-3 (12px) for consistent spacing between all elements.
+              Each icon/button has minimum 44x44px hit targets for accessibility.
+              Flex-wrap ensures proper stacking on smaller screens.
+            */}
+            <div className="flex gap-3 items-center flex-wrap">
               <RecategorizeButton onComplete={refetch} />
-              
+
               {/* Sort Dropdown */}
               <Select value={sortBy} onValueChange={(value: "category" | "title") => setSortBy(value)}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[140px] min-h-[44px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -143,13 +152,13 @@ const Index = () => {
                 </SelectContent>
               </Select>
 
-              {/* View Toggle */}
+              {/* View Toggle - grouped buttons with internal gap-1 for visual cohesion */}
               <div className="flex gap-1 border rounded-md p-1">
                 <Button
                   variant={viewMode === "grid" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("grid")}
-                  className="px-3"
+                  className="px-3 min-h-[36px] min-w-[36px]"
                 >
                   <Grid3x3 className="h-4 w-4" />
                 </Button>
@@ -157,18 +166,19 @@ const Index = () => {
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("list")}
-                  className="px-3"
+                  className="px-3 min-h-[36px] min-w-[36px]"
                 >
                   <List className="h-4 w-4" />
                 </Button>
               </div>
 
+              {/* Theme toggle with proper isolation from surrounding elements */}
               <ThemeToggle />
 
-              {/* User Menu */}
+              {/* User Menu with proper hit target sizing */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon">
+                  <Button variant="outline" size="icon" className="min-h-[44px] min-w-[44px]">
                     <User className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -184,11 +194,12 @@ const Index = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
 
+              {/* Bulk Import button - desktop version with text, mobile version icon-only */}
               <Button
                 onClick={() => setShowBulkImportDialog(true)}
                 variant="outline"
                 size="default"
-                className="hidden sm:flex"
+                className="hidden sm:flex min-h-[44px]"
               >
                 <Upload className="mr-2 h-5 w-5" />
                 Bulk Import
@@ -201,8 +212,9 @@ const Index = () => {
               >
                 <Upload className="h-5 w-5" />
               </Button>
-              
-              <Button onClick={() => setShowAddDialog(true)} size="default" className="hidden sm:flex">
+
+              {/* Add New Post button - desktop version with text, mobile version icon-only */}
+              <Button onClick={() => setShowAddDialog(true)} size="default" className="hidden sm:flex min-h-[44px]">
                 <Plus className="mr-2 h-5 w-5" />
                 Add New Post
               </Button>
