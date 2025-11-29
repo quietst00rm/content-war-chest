@@ -121,8 +121,9 @@ const Index = () => {
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-2">
             <div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-1">
-                LinkedIn Content Library
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1">
+                <span className="bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent">LinkedIn</span>
+                <span className="text-foreground"> War Chest</span>
               </h1>
               <p className="text-sm text-muted-foreground">
                 {totalPosts} posts • {usedPosts} used • {unusedPosts} ready to publish • {filteredCount} showing
