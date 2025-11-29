@@ -1,14 +1,23 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Input validation schema
+const AnalyzePostSchema = z.object({
+  content: z.string()
+    .min(10, "Content must be at least 10 characters")
+    .max(50000, "Content must be less than 50,000 characters")
+    .refine(val => val.trim().length > 0, "Content cannot be empty or whitespace only")
+});
+
 async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const response = await fetch(url, options);
-    
+
     // Retry on 503 Service Unavailable
     if (response.status === 503 && attempt < maxRetries) {
       const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
@@ -16,10 +25,10 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3)
       await new Promise(resolve => setTimeout(resolve, delay));
       continue;
     }
-    
+
     return response;
   }
-  
+
   throw new Error('Max retries exceeded');
 }
 
@@ -29,9 +38,29 @@ serve(async (req) => {
   }
 
   try {
-    const { content } = await req.json();
+    // Parse and validate input
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validationResult = AnalyzePostSchema.safeParse(body);
+    if (!validationResult.success) {
+      const errorMessage = validationResult.error.errors.map(e => e.message).join(', ');
+      return new Response(
+        JSON.stringify({ error: `Invalid input: ${errorMessage}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { content } = validationResult.data;
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    
+
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
@@ -82,14 +111,14 @@ Your response MUST be valid JSON with this exact structure:
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI gateway error:', response.status, errorText);
-      
+
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       if (response.status === 402) {
         return new Response(
           JSON.stringify({ error: 'Payment required. Please add credits to your workspace.' }),
@@ -109,7 +138,7 @@ Your response MUST be valid JSON with this exact structure:
 
     const data = await response.json();
     const aiResponse = data.choices[0].message.content;
-    
+
     console.log('AI Response:', aiResponse);
 
     // Parse JSON from AI response
@@ -149,10 +178,10 @@ Your response MUST be valid JSON with this exact structure:
 function formatForLinkedIn(content: string): string {
   // Split into lines
   const lines = content.split('\n').map(line => line.trim()).filter(line => line);
-  
+
   let formatted = '';
   let consecutiveLines = 0;
-  
+
   for (const line of lines) {
     // If it's a bullet point
     if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) {
@@ -162,7 +191,7 @@ function formatForLinkedIn(content: string): string {
       }
       formatted += line + '\n';
       consecutiveLines = 0;
-    } 
+    }
     // If it's a numbered list
     else if (/^\d+\./.test(line)) {
       if (consecutiveLines >= 3) {
@@ -176,7 +205,7 @@ function formatForLinkedIn(content: string): string {
     else {
       consecutiveLines++;
       formatted += line + '\n';
-      
+
       // Add spacing after 3 consecutive lines
       if (consecutiveLines >= 3) {
         formatted += '\n';
@@ -184,6 +213,6 @@ function formatForLinkedIn(content: string): string {
       }
     }
   }
-  
+
   return formatted.trim();
 }

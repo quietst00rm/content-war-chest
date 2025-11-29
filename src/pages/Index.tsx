@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { SearchBar } from "@/components/content-library/SearchBar";
 import { FilterSidebar } from "@/components/content-library/FilterSidebar";
 import { MobileFilterSheet } from "@/components/content-library/MobileFilterSheet";
@@ -10,7 +11,8 @@ import { BulkImportDialog } from "@/components/content-library/BulkImportDialog"
 import { RecategorizeButton } from "@/components/content-library/RecategorizeButton";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload, Grid3x3, List } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Plus, Upload, Grid3x3, List, LogOut, User } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CATEGORIES } from "@/lib/categories";
@@ -34,9 +36,11 @@ export interface Post {
   is_favorite: boolean;
   created_at: string;
   updated_at: string;
+  user_id: string | null;
 }
 
 const Index = () => {
+  const { user, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -159,7 +163,26 @@ const Index = () => {
               </div>
 
               <ThemeToggle />
-              
+
+              {/* User Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <User className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+                    {user?.email}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => signOut()}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <Button
                 onClick={() => setShowBulkImportDialog(true)}
                 variant="outline"

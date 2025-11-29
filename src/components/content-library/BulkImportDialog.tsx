@@ -3,6 +3,7 @@ import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Upload } from "lucide-react";
 
@@ -13,6 +14,7 @@ interface BulkImportDialogProps {
 }
 
 export const BulkImportDialog = ({ open, onOpenChange, onSuccess }: BulkImportDialogProps) => {
+  const { user } = useAuth();
   const [content, setContent] = useState("");
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
@@ -31,6 +33,11 @@ export const BulkImportDialog = ({ open, onOpenChange, onSuccess }: BulkImportDi
   const handleImport = async () => {
     if (!content.trim()) {
       toast({ title: "Please paste content to import", variant: "destructive" });
+      return;
+    }
+
+    if (!user) {
+      toast({ title: "You must be logged in to import posts", variant: "destructive" });
       return;
     }
 
@@ -64,6 +71,7 @@ export const BulkImportDialog = ({ open, onOpenChange, onSuccess }: BulkImportDi
             target_audience: data.target_audience,
             summary: data.summary,
             character_count: data.character_count,
+            user_id: user.id,
           });
 
           successCount++;
