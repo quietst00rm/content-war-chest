@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Copy, Check, ChevronDown, ChevronUp, AlertTriangle, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -13,9 +14,18 @@ import { format } from "date-fns";
 interface ExpandablePostCardProps {
   post: Post;
   onUpdate: () => void;
+  selectionMode: boolean;
+  isSelected: boolean;
+  onToggleSelection: (postId: string) => void;
 }
 
-export const ExpandablePostCard = ({ post, onUpdate }: ExpandablePostCardProps) => {
+export const ExpandablePostCard = ({ 
+  post, 
+  onUpdate,
+  selectionMode,
+  isSelected,
+  onToggleSelection,
+}: ExpandablePostCardProps) => {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [notes, setNotes] = useState(post.notes || "");
@@ -104,9 +114,29 @@ export const ExpandablePostCard = ({ post, onUpdate }: ExpandablePostCardProps) 
 
   return (
     <Card
-      className="p-6 cursor-pointer hover:shadow-lg transition-all"
-      onClick={() => setExpanded(!expanded)}
+      className="p-6 cursor-pointer hover:shadow-lg transition-all relative"
+      onClick={() => {
+        if (selectionMode) {
+          onToggleSelection(post.id);
+        } else {
+          setExpanded(!expanded);
+        }
+      }}
     >
+      {/* Selection Checkbox */}
+      {selectionMode && (
+        <div 
+          className="absolute top-4 right-4 z-10"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleSelection(post.id)}
+            className="h-5 w-5"
+          />
+        </div>
+      )}
+
       {/* Category Badge */}
       <div className="flex items-center justify-between mb-3">
         <Badge
@@ -119,9 +149,11 @@ export const ExpandablePostCard = ({ post, onUpdate }: ExpandablePostCardProps) 
         >
           {categoryEmoji} {post.primary_category}
         </Badge>
-        <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
-          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </Button>
+        {!selectionMode && (
+          <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+        )}
       </div>
 
       {/* Title */}

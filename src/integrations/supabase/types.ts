@@ -14,11 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      folders: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           character_count: number | null
           content: string
           created_at: string | null
+          folder_id: string | null
           formatted_content: string
           id: string
           is_favorite: boolean | null
@@ -40,6 +68,7 @@ export type Database = {
           character_count?: number | null
           content: string
           created_at?: string | null
+          folder_id?: string | null
           formatted_content: string
           id?: string
           is_favorite?: boolean | null
@@ -61,6 +90,7 @@ export type Database = {
           character_count?: number | null
           content?: string
           created_at?: string | null
+          folder_id?: string | null
           formatted_content?: string
           id?: string
           is_favorite?: boolean | null
@@ -78,7 +108,15 @@ export type Database = {
           used_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "posts_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
