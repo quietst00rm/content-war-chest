@@ -3,15 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { getCategoryColor, getCategoryEmoji, getCategoryStyle } from "@/lib/categories";
+import { FolderList } from "./FolderList";
 import type { Post } from "@/pages/Index";
 
 interface FilterSidebarProps {
   categories: string[];
   tags: string[];
   posts: Post[];
+  folders: Array<{ id: string; name: string; color: string }>;
+  selectedFolder: string | null;
   selectedCategory: string | null;
   selectedTags: string[];
   filterUsed: "all" | "used" | "unused";
+  onFolderChange: (folderId: string | null) => void;
   onCategoryChange: (category: string | null) => void;
   onTagsChange: (tags: string[]) => void;
   onUsedFilterChange: (filter: "all" | "used" | "unused") => void;
@@ -21,9 +25,12 @@ export const FilterSidebar = ({
   categories,
   tags,
   posts,
+  folders,
+  selectedFolder,
   selectedCategory,
   selectedTags,
   filterUsed,
+  onFolderChange,
   onCategoryChange,
   onTagsChange,
   onUsedFilterChange,
@@ -37,12 +44,13 @@ export const FilterSidebar = ({
   };
 
   const clearFilters = () => {
+    onFolderChange(null);
     onCategoryChange(null);
     onTagsChange([]);
     onUsedFilterChange("all");
   };
 
-  const hasActiveFilters = selectedCategory || selectedTags.length > 0 || filterUsed !== "all";
+  const hasActiveFilters = selectedFolder || selectedCategory || selectedTags.length > 0 || filterUsed !== "all";
 
   // Calculate counts
   const getCategoryCount = (category: string) => 
@@ -97,6 +105,19 @@ export const FilterSidebar = ({
             );
           })}
         </div>
+      </div>
+
+      <Separator className="my-4" />
+
+      {/* Folders */}
+      <div className="mb-6">
+        <h4 className="text-sm font-medium mb-3 text-muted-foreground uppercase tracking-wide">Folders</h4>
+        <FolderList
+          folders={folders}
+          posts={posts}
+          selectedFolder={selectedFolder}
+          onFolderChange={onFolderChange}
+        />
       </div>
 
       <Separator className="my-4" />

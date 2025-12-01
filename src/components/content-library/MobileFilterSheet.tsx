@@ -14,9 +14,12 @@ interface MobileFilterSheetProps {
   categories: string[];
   tags: string[];
   posts: any[];
+  folders: Array<{ id: string; name: string; color: string }>;
+  selectedFolder: string | null;
   selectedCategory: string | null;
   selectedTags: string[];
   filterUsed: "all" | "used" | "unused";
+  onFolderChange: (folderId: string | null) => void;
   onCategoryChange: (category: string | null) => void;
   onTagsChange: (tags: string[]) => void;
   onUsedFilterChange: (filter: "all" | "used" | "unused") => void;
@@ -26,14 +29,18 @@ export const MobileFilterSheet = ({
   categories,
   tags,
   posts,
+  folders,
+  selectedFolder,
   selectedCategory,
   selectedTags,
   filterUsed,
+  onFolderChange,
   onCategoryChange,
   onTagsChange,
   onUsedFilterChange,
 }: MobileFilterSheetProps) => {
   const activeFilterCount =
+    (selectedFolder ? 1 : 0) +
     (selectedCategory ? 1 : 0) +
     selectedTags.length +
     (filterUsed !== "all" ? 1 : 0);
@@ -62,9 +69,12 @@ export const MobileFilterSheet = ({
             categories={categories}
             tags={tags}
             posts={posts}
+            folders={folders}
+            selectedFolder={selectedFolder}
             selectedCategory={selectedCategory}
             selectedTags={selectedTags}
             filterUsed={filterUsed}
+            onFolderChange={onFolderChange}
             onCategoryChange={onCategoryChange}
             onTagsChange={onTagsChange}
             onUsedFilterChange={onUsedFilterChange}

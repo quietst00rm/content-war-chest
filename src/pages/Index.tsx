@@ -9,10 +9,13 @@ import { PostGrid } from "@/components/content-library/PostGrid";
 import { AddPostDialog } from "@/components/content-library/AddPostDialog";
 import { BulkImportDialog } from "@/components/content-library/BulkImportDialog";
 import { RecategorizeButton } from "@/components/content-library/RecategorizeButton";
+import { AddFolderDialog } from "@/components/content-library/AddFolderDialog";
+import { BulkActionsBar } from "@/components/content-library/BulkActionsBar";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Plus, Upload, Grid3x3, List, LogOut, User } from "lucide-react";
+import { Plus, Upload, Grid3x3, List, LogOut, User, FolderPlus, CheckSquare } from "lucide-react";
+import { toast } from "sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CATEGORIES } from "@/lib/categories";
@@ -37,6 +40,7 @@ export interface Post {
   created_at: string;
   updated_at: string;
   user_id: string | null;
+  folder_id: string | null;
 }
 
 const Index = () => {
@@ -45,10 +49,27 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [filterUsed, setFilterUsed] = useState<"all" | "used" | "unused">("all");
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showBulkImportDialog, setShowBulkImportDialog] = useState(false);
+  const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"category" | "title">("category");
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(new Set());
+
+  // Fetch folders
+  const { data: folders = [], refetch: refetchFolders } = useQuery({
+    queryKey: ["folders"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("folders")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as Array<{ id: string; name: string; color: string }>;
+    },
+  });
 
   // Fetch all posts for sidebar counts
   const { data: allPosts = [] } = useQuery({
@@ -64,7 +85,7 @@ const Index = () => {
   });
 
   const { data: posts = [], isLoading, refetch } = useQuery({
-    queryKey: ["posts", searchQuery, selectedCategory, selectedTags, filterUsed],
+    queryKey: ["posts", searchQuery, selectedCategory, selectedTags, filterUsed, selectedFolder],
     queryFn: async () => {
       let query = supabase.from("posts").select("*").order("created_at", { ascending: false });
 
@@ -87,6 +108,12 @@ const Index = () => {
         query = query.eq("is_used", true);
       } else if (filterUsed === "unused") {
         query = query.eq("is_used", false);
+      }
+
+      if (selectedFolder === "unfiled") {
+        query = query.is("folder_id", null);
+      } else if (selectedFolder) {
+        query = query.eq("folder_id", selectedFolder);
       }
 
       const { data, error } = await query;
@@ -113,6 +140,136 @@ const Index = () => {
       return a.title.localeCompare(b.title);
     }
   });
+
+  // Bulk action handlers
+  const handleSelectAll = () => {
+    setSelectedPostIds(new Set(sortedPosts.map((p) => p.id)));
+  };
+
+  const handleUnselectAll = () => {
+    setSelectedPostIds(new Set());
+  };
+
+  const handleToggleSelection = (postId: string) => {
+    const newSelection = new Set(selectedPostIds);
+    if (newSelection.has(postId)) {
+      newSelection.delete(postId);
+    } else {
+      newSelection.add(postId);
+    }
+    setSelectedPostIds(newSelection);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedPostIds.size === 0) return;
+    
+    if (!confirm(`Delete ${selectedPostIds.size} post(s)? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("posts")
+        .delete()
+        .in("id", Array.from(selectedPostIds));
+
+      if (error) throw error;
+
+      toast.success(`${selectedPostIds.size} post(s) deleted`);
+      setSelectedPostIds(new Set());
+      setSelectionMode(false);
+      refetch();
+    } catch (error) {
+      console.error("Error deleting posts:", error);
+      toast.error("Failed to delete posts");
+    }
+  };
+
+  const handleBulkMarkAsUsed = async () => {
+    if (selectedPostIds.size === 0) return;
+
+    try {
+      const { error } = await supabase
+        .from("posts")
+        .update({ is_used: true, used_at: new Date().toISOString() })
+        .in("id", Array.from(selectedPostIds));
+
+      if (error) throw error;
+
+      toast.success(`${selectedPostIds.size} post(s) marked as used`);
+      setSelectedPostIds(new Set());
+      setSelectionMode(false);
+      refetch();
+    } catch (error) {
+      console.error("Error marking posts as used:", error);
+      toast.error("Failed to mark posts as used");
+    }
+  };
+
+  const handleBulkAutoFormat = async () => {
+    if (selectedPostIds.size === 0) return;
+
+    toast.info(`Formatting ${selectedPostIds.size} post(s)...`);
+
+    try {
+      const selectedPosts = sortedPosts.filter((p) => selectedPostIds.has(p.id));
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const post of selectedPosts) {
+        try {
+          const { data, error } = await supabase.functions.invoke("format-post", {
+            body: { postId: post.id },
+          });
+
+          if (error) throw error;
+          successCount++;
+        } catch (error) {
+          console.error(`Error formatting post ${post.id}:`, error);
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`${successCount} post(s) formatted successfully`);
+      }
+      if (failCount > 0) {
+        toast.error(`${failCount} post(s) failed to format`);
+      }
+
+      setSelectedPostIds(new Set());
+      setSelectionMode(false);
+      refetch();
+    } catch (error) {
+      console.error("Error in bulk auto-format:", error);
+      toast.error("Failed to format posts");
+    }
+  };
+
+  const handleBulkMoveToFolder = async (folderId: string | null) => {
+    if (selectedPostIds.size === 0) return;
+
+    try {
+      const { error } = await supabase
+        .from("posts")
+        .update({ folder_id: folderId })
+        .in("id", Array.from(selectedPostIds));
+
+      if (error) throw error;
+
+      const message = folderId 
+        ? `${selectedPostIds.size} post(s) moved to folder`
+        : `${selectedPostIds.size} post(s) removed from folder`;
+      
+      toast.success(message);
+      setSelectedPostIds(new Set());
+      setSelectionMode(false);
+      refetch();
+    } catch (error) {
+      console.error("Error moving posts to folder:", error);
+      toast.error("Failed to move posts");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -194,6 +351,54 @@ const Index = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
 
+              {/* Select Posts button */}
+              <Button
+                onClick={() => {
+                  setSelectionMode(!selectionMode);
+                  if (selectionMode) {
+                    setSelectedPostIds(new Set());
+                  }
+                }}
+                variant={selectionMode ? "default" : "outline"}
+                size="default"
+                className="hidden sm:flex min-h-[44px]"
+              >
+                <CheckSquare className="mr-2 h-5 w-5" />
+                {selectionMode ? "Done" : "Select Posts"}
+              </Button>
+              <Button
+                onClick={() => {
+                  setSelectionMode(!selectionMode);
+                  if (selectionMode) {
+                    setSelectedPostIds(new Set());
+                  }
+                }}
+                variant={selectionMode ? "default" : "outline"}
+                size="icon"
+                className="sm:hidden min-h-[44px] min-w-[44px]"
+              >
+                <CheckSquare className="h-5 w-5" />
+              </Button>
+
+              {/* Add New Folder button */}
+              <Button
+                onClick={() => setShowAddFolderDialog(true)}
+                variant="outline"
+                size="default"
+                className="hidden sm:flex min-h-[44px]"
+              >
+                <FolderPlus className="mr-2 h-5 w-5" />
+                Add New Folder
+              </Button>
+              <Button
+                onClick={() => setShowAddFolderDialog(true)}
+                variant="outline"
+                size="icon"
+                className="sm:hidden min-h-[44px] min-w-[44px]"
+              >
+                <FolderPlus className="h-5 w-5" />
+              </Button>
+
               {/* Bulk Import button - desktop version with text, mobile version icon-only */}
               <Button
                 onClick={() => setShowBulkImportDialog(true)}
@@ -238,9 +443,12 @@ const Index = () => {
             categories={categories}
             tags={allTags}
             posts={allPosts}
+            folders={folders}
+            selectedFolder={selectedFolder}
             selectedCategory={selectedCategory}
             selectedTags={selectedTags}
             filterUsed={filterUsed}
+            onFolderChange={setSelectedFolder}
             onCategoryChange={setSelectedCategory}
             onTagsChange={setSelectedTags}
             onUsedFilterChange={setFilterUsed}
@@ -255,9 +463,12 @@ const Index = () => {
               categories={categories}
               tags={allTags}
               posts={allPosts}
+              folders={folders}
+              selectedFolder={selectedFolder}
               selectedCategory={selectedCategory}
               selectedTags={selectedTags}
               filterUsed={filterUsed}
+              onFolderChange={setSelectedFolder}
               onCategoryChange={setSelectedCategory}
               onTagsChange={setSelectedTags}
               onUsedFilterChange={setFilterUsed}
@@ -265,7 +476,15 @@ const Index = () => {
           </div>
 
           {/* Posts Grid */}
-          <PostGrid posts={sortedPosts} isLoading={isLoading} onUpdate={refetch} viewMode={viewMode} />
+          <PostGrid 
+            posts={sortedPosts} 
+            isLoading={isLoading} 
+            onUpdate={refetch} 
+            viewMode={viewMode}
+            selectionMode={selectionMode}
+            selectedPostIds={selectedPostIds}
+            onToggleSelection={handleToggleSelection}
+          />
         </div>
 
         {/* Add Post Dialog */}
@@ -277,6 +496,31 @@ const Index = () => {
           onOpenChange={setShowBulkImportDialog}
           onSuccess={refetch}
         />
+
+        {/* Add Folder Dialog */}
+        <AddFolderDialog
+          open={showAddFolderDialog}
+          onOpenChange={setShowAddFolderDialog}
+          onFolderAdded={() => {
+            refetchFolders();
+            refetch();
+          }}
+        />
+
+        {/* Bulk Actions Bar */}
+        {selectionMode && (
+          <BulkActionsBar
+            selectedCount={selectedPostIds.size}
+            totalCount={sortedPosts.length}
+            onSelectAll={handleSelectAll}
+            onUnselectAll={handleUnselectAll}
+            onDelete={handleBulkDelete}
+            onMarkAsUsed={handleBulkMarkAsUsed}
+            onAutoFormat={handleBulkAutoFormat}
+            onMoveToFolder={handleBulkMoveToFolder}
+            folders={folders}
+          />
+        )}
       </div>
       <Toaster />
     </div>

@@ -6,9 +6,20 @@ interface PostGridProps {
   isLoading: boolean;
   onUpdate: () => void;
   viewMode: "grid" | "list";
+  selectionMode: boolean;
+  selectedPostIds: Set<string>;
+  onToggleSelection: (postId: string) => void;
 }
 
-export const PostGrid = ({ posts, isLoading, onUpdate, viewMode }: PostGridProps) => {
+export const PostGrid = ({ 
+  posts, 
+  isLoading, 
+  onUpdate, 
+  viewMode,
+  selectionMode,
+  selectedPostIds,
+  onToggleSelection,
+}: PostGridProps) => {
   if (isLoading) {
     return (
       <div className="grid gap-6 md:grid-cols-2">
@@ -30,7 +41,14 @@ export const PostGrid = ({ posts, isLoading, onUpdate, viewMode }: PostGridProps
   return (
     <div className={viewMode === "grid" ? "grid gap-6 md:grid-cols-2" : "flex flex-col gap-4"}>
       {posts.map((post) => (
-        <ExpandablePostCard key={post.id} post={post} onUpdate={onUpdate} />
+        <ExpandablePostCard 
+          key={post.id} 
+          post={post} 
+          onUpdate={onUpdate}
+          selectionMode={selectionMode}
+          isSelected={selectedPostIds.has(post.id)}
+          onToggleSelection={onToggleSelection}
+        />
       ))}
     </div>
   );
