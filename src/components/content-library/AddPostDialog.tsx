@@ -33,6 +33,27 @@ export const AddPostDialog = ({ open, onOpenChange, onSuccess }: AddPostDialogPr
   const [analyzed, setAnalyzed] = useState<AnalyzedPost | null>(null);
   const [editMode, setEditMode] = useState(false);
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text/plain');
+    // Normalize line endings
+    const normalized = pastedText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    
+    // Get current textarea and cursor position
+    const textarea = e.currentTarget;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    
+    // Insert normalized text at cursor position
+    const newContent = content.substring(0, start) + normalized + content.substring(end);
+    setContent(newContent);
+    
+    // Set cursor position after pasted text
+    setTimeout(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + normalized.length;
+    }, 0);
+  };
+
   const handleAnalyze = async () => {
     if (!content.trim()) {
       toast({ title: "Please enter post content", variant: "destructive" });
@@ -113,9 +134,10 @@ export const AddPostDialog = ({ open, onOpenChange, onSuccess }: AddPostDialogPr
             id="content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
+            onPaste={handlePaste}
             placeholder="Paste your LinkedIn post here..."
             rows={10}
-            className="mt-2"
+            className="mt-2 whitespace-pre-wrap font-sans"
             disabled={!!analyzed && !editMode}
           />
         </div>
