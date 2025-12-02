@@ -176,43 +176,14 @@ Your response MUST be valid JSON with this exact structure:
 });
 
 function formatForLinkedIn(content: string): string {
-  // Split into lines
-  const lines = content.split('\n').map(line => line.trim()).filter(line => line);
-
-  let formatted = '';
-  let consecutiveLines = 0;
-
-  for (const line of lines) {
-    // If it's a bullet point
-    if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) {
-      if (consecutiveLines >= 3) {
-        formatted += '\n';
-        consecutiveLines = 0;
-      }
-      formatted += line + '\n';
-      consecutiveLines = 0;
-    }
-    // If it's a numbered list
-    else if (/^\d+\./.test(line)) {
-      if (consecutiveLines >= 3) {
-        formatted += '\n';
-        consecutiveLines = 0;
-      }
-      formatted += line + '\n';
-      consecutiveLines = 0;
-    }
-    // Regular paragraph
-    else {
-      consecutiveLines++;
-      formatted += line + '\n';
-
-      // Add spacing after 3 consecutive lines
-      if (consecutiveLines >= 3) {
-        formatted += '\n';
-        consecutiveLines = 0;
-      }
-    }
-  }
-
-  return formatted.trim();
+  // Normalize line endings (Windows \r\n to Unix \n)
+  let normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  
+  // Collapse more than 2 consecutive newlines to exactly 2 (paragraph break)
+  normalized = normalized.replace(/\n{3,}/g, '\n\n');
+  
+  // Trim trailing whitespace from each line but preserve line structure
+  const lines = normalized.split('\n').map(line => line.trimEnd());
+  
+  return lines.join('\n').trim();
 }
