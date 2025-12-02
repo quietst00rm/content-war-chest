@@ -273,49 +273,31 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-4 sm:p-6">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-2">
-            <div>
-              {/* Main heading with premium SaaS typography - authoritative and strategic */}
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight mb-2">
-                <span className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 bg-clip-text text-transparent drop-shadow-sm">
-                  Content War Chest
-                </span>
+      <div className="container mx-auto p-4 sm:p-6 max-w-screen-2xl">
+        {/* Professional Navigation Header */}
+        <header className="mb-8 border-b border-border pb-6">
+          {/* Top Bar: Title + Utility Controls */}
+          <div className="flex items-start justify-between mb-6">
+            {/* Left: Brand & Stats */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-2 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 bg-clip-text text-transparent">
+                Content War Chest
               </h1>
-              {/* Subtitle with post statistics - visually subordinate to main heading */}
-              <p className="text-sm text-muted-foreground tracking-wide">
-                {totalPosts} posts • {usedPosts} used • {unusedPosts} ready to publish • {filteredCount} showing
+              <p className="text-sm text-muted-foreground font-medium">
+                {totalPosts} posts • {usedPosts} used • {unusedPosts} ready • {filteredCount} showing
               </p>
             </div>
-            {/*
-              Header action buttons with proper spacing to prevent icon overlap.
-              Using gap-3 (12px) for consistent spacing between all elements.
-              Each icon/button has minimum 44x44px hit targets for accessibility.
-              Flex-wrap ensures proper stacking on smaller screens.
-            */}
-            <div className="flex gap-3 items-center flex-wrap">
-              <RecategorizeButton onComplete={refetch} />
 
-              {/* Sort Dropdown */}
-              <Select value={sortBy} onValueChange={(value: "category" | "title") => setSortBy(value)}>
-                <SelectTrigger className="w-[140px] min-h-[44px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="category">By Category</SelectItem>
-                  <SelectItem value="title">By Title (A-Z)</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* View Toggle - grouped buttons with internal gap-1 for visual cohesion */}
-              <div className="flex gap-1 border rounded-md p-1">
+            {/* Right: Utility Controls (Settings Area) */}
+            <div className="flex items-center gap-2 ml-4">
+              {/* View Mode Toggle */}
+              <div className="hidden sm:flex items-center gap-0.5 p-1 bg-muted/50 rounded-lg border border-border">
                 <Button
                   variant={viewMode === "grid" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("grid")}
-                  className="px-3 min-h-[36px] min-w-[36px]"
+                  className="h-8 w-8 p-0"
+                  aria-label="Grid view"
                 >
                   <Grid3x3 className="h-4 w-4" />
                 </Button>
@@ -323,116 +305,96 @@ const Index = () => {
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("list")}
-                  className="px-3 min-h-[36px] min-w-[36px]"
+                  className="h-8 w-8 p-0"
+                  aria-label="List view"
                 >
                   <List className="h-4 w-4" />
                 </Button>
               </div>
 
-              {/* Theme toggle with proper isolation from surrounding elements */}
+              {/* Sort Dropdown */}
+              <Select value={sortBy} onValueChange={(value: "category" | "title") => setSortBy(value)}>
+                <SelectTrigger className="w-[130px] h-9 text-sm hidden sm:flex" aria-label="Sort posts">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="category">By Category</SelectItem>
+                  <SelectItem value="title">A-Z</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Theme Toggle */}
               <ThemeToggle />
 
-              {/* User Menu with proper hit target sizing */}
+              {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="min-h-[44px] min-w-[44px]">
+                  <Button variant="ghost" size="sm" className="h-9 w-9 p-0" aria-label="User menu">
                     <User className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem disabled className="text-xs text-muted-foreground truncate">
                     {user?.email}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => signOut()}>
+                  <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+            </div>
+          </div>
 
-              {/* Select Posts button */}
-              <Button
-                onClick={() => {
-                  setSelectionMode(!selectionMode);
-                  if (selectionMode) {
-                    setSelectedPostIds(new Set());
-                  }
-                }}
-                variant={selectionMode ? "default" : "outline"}
-                size="default"
-                className="hidden sm:flex min-h-[44px]"
-              >
-                <CheckSquare className="mr-2 h-5 w-5" />
-                {selectionMode ? "Done" : "Select Posts"}
+          {/* Action Bar: Primary Actions + Contextual Tools */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            {/* Left: Primary Actions */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button onClick={() => setShowAddDialog(true)} size="default" className="h-10 font-medium shadow-sm">
+                <Plus className="mr-2 h-4 w-4" />
+                New Post
               </Button>
-              <Button
-                onClick={() => {
-                  setSelectionMode(!selectionMode);
-                  if (selectionMode) {
-                    setSelectedPostIds(new Set());
-                  }
-                }}
-                variant={selectionMode ? "default" : "outline"}
-                size="icon"
-                className="sm:hidden min-h-[44px] min-w-[44px]"
-              >
-                <CheckSquare className="h-5 w-5" />
-              </Button>
-
-              {/* Add New Folder button */}
               <Button
                 onClick={() => setShowAddFolderDialog(true)}
                 variant="outline"
                 size="default"
-                className="hidden sm:flex min-h-[44px]"
+                className="h-10 font-medium"
               >
-                <FolderPlus className="mr-2 h-5 w-5" />
-                Add New Folder
+                <FolderPlus className="mr-2 h-4 w-4" />
+                New Folder
               </Button>
-              <Button
-                onClick={() => setShowAddFolderDialog(true)}
-                variant="outline"
-                size="icon"
-                className="sm:hidden min-h-[44px] min-w-[44px]"
-              >
-                <FolderPlus className="h-5 w-5" />
-              </Button>
-
-              {/* Bulk Import button - desktop version with text, mobile version icon-only */}
               <Button
                 onClick={() => setShowBulkImportDialog(true)}
                 variant="outline"
                 size="default"
-                className="hidden sm:flex min-h-[44px]"
+                className="h-10 font-medium"
               >
-                <Upload className="mr-2 h-5 w-5" />
+                <Upload className="mr-2 h-4 w-4" />
                 Bulk Import
               </Button>
-              <Button
-                onClick={() => setShowBulkImportDialog(true)}
-                variant="outline"
-                size="icon"
-                className="sm:hidden min-h-[44px] min-w-[44px]"
-              >
-                <Upload className="h-5 w-5" />
-              </Button>
+            </div>
 
-              {/* Add New Post button - desktop version with text, mobile version icon-only */}
-              <Button onClick={() => setShowAddDialog(true)} size="default" className="hidden sm:flex min-h-[44px]">
-                <Plus className="mr-2 h-5 w-5" />
-                Add New Post
-              </Button>
+            {/* Right: Contextual Tools */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <RecategorizeButton onComplete={refetch} />
               <Button
-                onClick={() => setShowAddDialog(true)}
-                size="icon"
-                className="sm:hidden min-h-[44px] min-w-[44px]"
+                onClick={() => {
+                  setSelectionMode(!selectionMode);
+                  if (selectionMode) {
+                    setSelectedPostIds(new Set());
+                  }
+                }}
+                variant={selectionMode ? "default" : "outline"}
+                size="default"
+                className="h-10 font-medium"
               >
-                <Plus className="h-5 w-5" />
+                <CheckSquare className="mr-2 h-4 w-4" />
+                {selectionMode ? "Done Selecting" : "Select Posts"}
               </Button>
             </div>
           </div>
-        </div>
+        </header>
 
         {/* Search */}
         <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
