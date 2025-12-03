@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { getCategoryColor, getCategoryEmoji, getCategoryStyle } from "@/lib/categories";
+import { getCategoryEmoji, getCategoryStyle } from "@/lib/categories";
 import { FolderList } from "./FolderList";
 import type { Post } from "@/pages/Index";
 
@@ -73,11 +73,11 @@ export const FilterSidebar = ({
     .map(([tag]) => tag);
 
   return (
-    <Card className="p-4 sm:p-6 h-fit sticky top-6">
+    <Card className="p-4 sm:p-6 h-fit sticky top-6 bg-card border-border">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-base sm:text-lg">Filters</h3>
+        <h3 className="font-semibold text-base sm:text-lg text-foreground">Filters</h3>
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="min-h-[36px]">
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="min-h-[36px] text-muted-foreground hover:text-foreground">
             Clear All
           </Button>
         )}
@@ -85,23 +85,26 @@ export const FilterSidebar = ({
 
       {/* Status Filter */}
       <div className="mb-6">
-        <h4 className="text-sm font-medium mb-3 text-muted-foreground uppercase tracking-wide">Status</h4>
-        <div className="space-y-2">
+        <h4 className="text-xs font-medium mb-3 text-muted-foreground uppercase tracking-wider">Status</h4>
+        <div className="space-y-1">
           {(["all", "unused", "used"] as const).map((status) => {
             const count = status === "all" ? allCount : status === "used" ? usedCount : unusedCount;
+            const isActive = filterUsed === status;
             return (
-              <Button
+              <button
                 key={status}
-                variant={filterUsed === status ? "default" : "outline"}
-                size="sm"
-                className="w-full justify-between min-h-[44px]"
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
+                  isActive 
+                    ? "bg-primary/20 text-primary" 
+                    : "text-muted-foreground hover:bg-secondary"
+                }`}
                 onClick={() => onUsedFilterChange(status)}
               >
-                <span>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
-                <Badge variant="secondary" className="ml-2">
+                <span className="capitalize">{status}</span>
+                <span className={`text-xs ${isActive ? "text-primary" : "text-muted-foreground"}`}>
                   {count}
-                </Badge>
-              </Button>
+                </span>
+              </button>
             );
           })}
         </div>
@@ -111,7 +114,7 @@ export const FilterSidebar = ({
 
       {/* Folders */}
       <div className="mb-6">
-        <h4 className="text-sm font-medium mb-3 text-muted-foreground uppercase tracking-wide">Folders</h4>
+        <h4 className="text-xs font-medium mb-3 text-muted-foreground uppercase tracking-wider">Folders</h4>
         <FolderList
           folders={folders}
           posts={posts}
@@ -124,8 +127,8 @@ export const FilterSidebar = ({
 
       {/* Categories */}
       <div className="mb-6">
-        <h4 className="text-sm font-medium mb-3 text-muted-foreground uppercase tracking-wide">Categories</h4>
-        <div className="space-y-2">
+        <h4 className="text-xs font-medium mb-3 text-muted-foreground uppercase tracking-wider">Categories</h4>
+        <div className="space-y-1">
           {categories.map((category) => {
             const isSelected = selectedCategory === category;
             const categoryStyle = getCategoryStyle(category, isSelected);
@@ -133,26 +136,27 @@ export const FilterSidebar = ({
             const count = getCategoryCount(category);
 
             return (
-              <Button
+              <button
                 key={category}
-                variant="outline"
-                size="sm"
-                className="w-full justify-between text-left h-auto py-3 px-3 min-h-[44px]"
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
+                  isSelected 
+                    ? "" 
+                    : "text-muted-foreground hover:bg-secondary"
+                }`}
                 style={isSelected ? {
                   backgroundColor: categoryStyle.backgroundColor,
-                  borderColor: categoryStyle.borderColor,
                   color: categoryStyle.color,
                 } : {}}
                 onClick={() => onCategoryChange(isSelected ? null : category)}
               >
-                <span className="flex items-center gap-2 truncate text-xs sm:text-sm">
+                <span className="flex items-center gap-2 truncate">
                   <span>{emoji}</span>
                   <span>{category}</span>
                 </span>
-                <Badge variant="secondary" className="ml-2">
+                <span className={`text-xs ${isSelected ? "" : "text-muted-foreground"}`}>
                   {count}
-                </Badge>
-              </Button>
+                </span>
+              </button>
             );
           })}
         </div>
@@ -162,13 +166,17 @@ export const FilterSidebar = ({
 
       {/* Popular Tags */}
       <div>
-        <h4 className="text-sm font-medium mb-3 text-muted-foreground uppercase tracking-wide">Popular Tags</h4>
+        <h4 className="text-xs font-medium mb-3 text-muted-foreground uppercase tracking-wider">Popular Tags</h4>
         <div className="flex flex-wrap gap-2">
           {popularTags.map((tag) => (
             <Badge
               key={tag}
-              variant={selectedTags.includes(tag) ? "default" : "outline"}
-              className="cursor-pointer min-h-[32px] px-3 py-1.5 text-xs sm:text-sm hover:bg-accent"
+              variant={selectedTags.includes(tag) ? "default" : "secondary"}
+              className={`cursor-pointer px-2.5 py-1 text-xs rounded-full font-normal lowercase ${
+                selectedTags.includes(tag) 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+              }`}
               onClick={() => toggleTag(tag)}
             >
               {tag}

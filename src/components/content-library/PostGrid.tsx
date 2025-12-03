@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ExpandablePostCard } from "./ExpandablePostCard";
 import type { Post } from "@/pages/Index";
 
@@ -20,6 +21,12 @@ export const PostGrid = ({
   selectedPostIds,
   onToggleSelection,
 }: PostGridProps) => {
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+
+  const handleToggleExpand = (postId: string) => {
+    setExpandedPostId(expandedPostId === postId ? null : postId);
+  };
+
   if (isLoading) {
     return (
       <div className="grid gap-6 md:grid-cols-2">
@@ -48,6 +55,8 @@ export const PostGrid = ({
           selectionMode={selectionMode}
           isSelected={selectedPostIds.has(post.id)}
           onToggleSelection={onToggleSelection}
+          isExpanded={expandedPostId === post.id}
+          onToggleExpand={handleToggleExpand}
         />
       ))}
     </div>
