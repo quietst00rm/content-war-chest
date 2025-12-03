@@ -446,6 +446,7 @@ const Index = () => {
             selectionMode={selectionMode}
             selectedPostIds={selectedPostIds}
             onToggleSelection={handleToggleSelection}
+            folders={folders}
           />
         </div>
 
