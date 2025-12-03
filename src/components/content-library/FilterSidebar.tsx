@@ -162,28 +162,6 @@ export const FilterSidebar = ({
         </div>
       </div>
 
-      <Separator className="my-4" />
-
-      {/* Popular Tags */}
-      <div>
-        <h4 className="text-xs font-medium mb-3 text-muted-foreground uppercase tracking-wider">Popular Tags</h4>
-        <div className="flex flex-wrap gap-2">
-          {popularTags.map((tag) => (
-            <Badge
-              key={tag}
-              variant={selectedTags.includes(tag) ? "default" : "secondary"}
-              className={`cursor-pointer px-2.5 py-1 text-xs rounded-full font-normal lowercase ${
-                selectedTags.includes(tag) 
-                  ? "bg-primary text-primary-foreground" 
-                  : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-              }`}
-              onClick={() => toggleTag(tag)}
-            >
-              {tag}
-            </Badge>
-          ))}
-        </div>
-      </div>
     </Card>
   );
 };

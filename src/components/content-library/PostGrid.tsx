@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ExpandablePostCard } from "./ExpandablePostCard";
+import { PostCard } from "./PostCard";
+import { PostModal } from "./PostModal";
 import type { Post } from "@/pages/Index";
 
 interface PostGridProps {
@@ -10,28 +11,39 @@ interface PostGridProps {
   selectionMode: boolean;
   selectedPostIds: Set<string>;
   onToggleSelection: (postId: string) => void;
+  folders: Array<{ id: string; name: string; color: string }>;
 }
 
-export const PostGrid = ({ 
-  posts, 
-  isLoading, 
-  onUpdate, 
+export const PostGrid = ({
+  posts,
+  isLoading,
+  onUpdate,
   viewMode,
   selectionMode,
   selectedPostIds,
   onToggleSelection,
+  folders,
 }: PostGridProps) => {
-  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  const handleToggleExpand = (postId: string) => {
-    setExpandedPostId(expandedPostId === postId ? null : postId);
+  const handleOpenModal = (post: Post) => {
+    setSelectedPost(post);
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = (open: boolean) => {
+    setModalOpen(open);
+    if (!open) {
+      setSelectedPost(null);
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="grid gap-6 md:grid-cols-2">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-64 rounded-lg bg-muted animate-pulse" />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="h-52 rounded-lg bg-muted animate-pulse" />
         ))}
       </div>
     );
@@ -46,19 +58,27 @@ export const PostGrid = ({
   }
 
   return (
-    <div className={viewMode === "grid" ? "grid gap-6 md:grid-cols-2" : "flex flex-col gap-4"}>
-      {posts.map((post) => (
-        <ExpandablePostCard 
-          key={post.id} 
-          post={post} 
-          onUpdate={onUpdate}
-          selectionMode={selectionMode}
-          isSelected={selectedPostIds.has(post.id)}
-          onToggleSelection={onToggleSelection}
-          isExpanded={expandedPostId === post.id}
-          onToggleExpand={handleToggleExpand}
-        />
-      ))}
-    </div>
+    <>
+      <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-4"}>
+        {posts.map((post) => (
+          <PostCard
+            key={post.id}
+            post={post}
+            selectionMode={selectionMode}
+            isSelected={selectedPostIds.has(post.id)}
+            onToggleSelection={onToggleSelection}
+            onOpenModal={handleOpenModal}
+          />
+        ))}
+      </div>
+
+      <PostModal
+        post={selectedPost}
+        open={modalOpen}
+        onOpenChange={handleCloseModal}
+        onUpdate={onUpdate}
+        folders={folders}
+      />
+    </>
   );
 };
