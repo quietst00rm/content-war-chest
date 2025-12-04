@@ -44,15 +44,15 @@ export const PostCard = ({
   const categoryStyle = getCategoryStyle(post.primary_category);
   const categoryEmoji = getCategoryEmoji(post.primary_category);
 
-  // Preview: first 2-3 lines
-  const previewLines = post.content.split('\n').filter(line => line.trim()).slice(0, 3).join(' ');
-  const preview = previewLines.length > 150 ? previewLines.slice(0, 150) + "..." : previewLines;
+  // Preview: first 2 lines only
+  const previewLines = post.content.split('\n').filter(line => line.trim()).slice(0, 2).join(' ');
+  const preview = previewLines.length > 100 ? previewLines.slice(0, 100) + "..." : previewLines;
 
-  const visibleTags = post.tags?.slice(0, 4) || [];
+  const visibleTags = post.tags?.slice(0, 3) || [];
 
   return (
     <Card
-      className="p-4 cursor-pointer transition-colors duration-150 relative border-border hover:border-muted-foreground/50 bg-card/80"
+      className="h-[220px] p-4 cursor-pointer transition-colors duration-150 relative border-border hover:border-muted-foreground/50 bg-card/80 flex flex-col"
       onClick={handleCardClick}
     >
       {/* Selection Checkbox */}
@@ -76,28 +76,28 @@ export const PostCard = ({
           color: categoryStyle.color,
           border: 'none',
         }}
-        className="text-xs font-medium px-2 py-0.5 rounded-full"
+        className="text-xs font-medium px-2 py-0.5 rounded-full w-fit"
       >
         {categoryEmoji} {post.primary_category}
       </Badge>
 
       {/* Title */}
-      <h3 className="text-base font-semibold text-foreground mt-3 mb-2 line-clamp-2">
+      <h3 className="text-base font-semibold text-foreground mt-2 mb-1 line-clamp-2 leading-tight">
         {post.title}
       </h3>
 
-      {/* Preview Text */}
-      <p className="text-sm text-muted-foreground mb-3 line-clamp-3 leading-relaxed">
+      {/* Preview Text - fills available space */}
+      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed flex-1">
         {preview}
       </p>
 
       {/* Tags Row */}
       {visibleTags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
+        <div className="flex flex-wrap gap-1 overflow-hidden max-h-6 mb-2">
           {visibleTags.map((tag) => (
             <span
               key={tag}
-              className="text-xs uppercase text-muted-foreground bg-secondary/50 px-2 py-1 rounded"
+              className="text-xs uppercase text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded"
             >
               {tag}
             </span>
@@ -105,8 +105,8 @@ export const PostCard = ({
         </div>
       )}
 
-      {/* Footer: Character count + Copy button */}
-      <div className="flex items-center justify-between">
+      {/* Footer: Character count + Copy button - pinned to bottom */}
+      <div className="flex items-center justify-between mt-auto pt-2">
         <span className="text-xs text-muted-foreground/70">
           {post.character_count || 0} chars
         </span>

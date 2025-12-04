@@ -272,24 +272,63 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-4 sm:p-6 max-w-screen-2xl">
-        {/* Professional Navigation Header */}
-        <header className="mb-8 border-b border-border pb-6">
-          {/* Top Bar: Title + Utility Controls */}
-          <div className="flex items-start justify-between mb-6">
-            {/* Left: Brand & Stats */}
-            <div className="flex-1 min-w-0">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-2 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 bg-clip-text text-transparent">
-                Content War Chest
-              </h1>
-              <p className="text-sm text-muted-foreground font-medium">
-                {totalPosts} posts • {usedPosts} used • {unusedPosts} ready • {filteredCount} showing
-              </p>
-            </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Minimal Header */}
+      <header className="h-14 border-b border-border flex items-center justify-between px-4 shrink-0">
+        <h1 className="text-xl font-bold bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 bg-clip-text text-transparent">
+          Content War Chest
+        </h1>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-9 w-9 p-0" aria-label="User menu">
+                <User className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem disabled className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
 
-            {/* Right: Utility Controls (Settings Area) */}
-            <div className="flex items-center gap-2 ml-4">
+      {/* Main Layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar - flush left, full height */}
+        <aside className="hidden lg:block w-[220px] border-r border-border overflow-y-auto shrink-0">
+          <FilterSidebar
+            categories={categories}
+            tags={allTags}
+            posts={allPosts}
+            folders={folders}
+            selectedFolder={selectedFolder}
+            selectedCategory={selectedCategory}
+            selectedTags={selectedTags}
+            filterUsed={filterUsed}
+            onFolderChange={setSelectedFolder}
+            onCategoryChange={setSelectedCategory}
+            onTagsChange={setSelectedTags}
+            onUsedFilterChange={setFilterUsed}
+          />
+        </aside>
+
+        {/* Content Area */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+          {/* Search + Actions Row */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
+            <div className="flex-1 w-full sm:max-w-md">
+              <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+            </div>
+            
+            <div className="flex items-center gap-2 flex-wrap">
               {/* View Mode Toggle */}
               <div className="hidden sm:flex items-center gap-0.5 p-1 bg-muted/50 rounded-lg border border-border">
                 <Button
@@ -314,7 +353,7 @@ const Index = () => {
 
               {/* Sort Dropdown */}
               <Select value={sortBy} onValueChange={(value: "category" | "title") => setSortBy(value)}>
-                <SelectTrigger className="w-[130px] h-9 text-sm hidden sm:flex" aria-label="Sort posts">
+                <SelectTrigger className="w-[120px] h-9 text-sm" aria-label="Sort posts">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -323,60 +362,34 @@ const Index = () => {
                 </SelectContent>
               </Select>
 
-              {/* Theme Toggle */}
-              <ThemeToggle />
-
-              {/* User Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-9 w-9 p-0" aria-label="User menu">
-                    <User className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem disabled className="text-xs text-muted-foreground truncate">
-                    {user?.email}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button onClick={() => setShowAddDialog(true)} size="sm" className="h-9">
+                <Plus className="mr-1 h-4 w-4" />
+                New Post
+              </Button>
             </div>
           </div>
 
-          {/* Action Bar: Primary Actions + Contextual Tools */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            {/* Left: Primary Actions */}
+          {/* Secondary Actions Row */}
+          <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2 flex-wrap">
-              <Button onClick={() => setShowAddDialog(true)} size="default" className="h-10 font-medium shadow-sm">
-                <Plus className="mr-2 h-4 w-4" />
-                New Post
-              </Button>
               <Button
                 onClick={() => setShowAddFolderDialog(true)}
                 variant="outline"
-                size="default"
-                className="h-10 font-medium"
+                size="sm"
+                className="h-8"
               >
-                <FolderPlus className="mr-2 h-4 w-4" />
-                New Folder
+                <FolderPlus className="mr-1 h-3 w-3" />
+                Folder
               </Button>
               <Button
                 onClick={() => setShowBulkImportDialog(true)}
                 variant="outline"
-                size="default"
-                className="h-10 font-medium"
+                size="sm"
+                className="h-8"
               >
-                <Upload className="mr-2 h-4 w-4" />
-                Bulk Import
+                <Upload className="mr-1 h-3 w-3" />
+                Import
               </Button>
-            </div>
-
-            {/* Right: Contextual Tools */}
-            <div className="flex items-center gap-2 flex-wrap">
               <RecategorizeButton onComplete={refetch} />
               <Button
                 onClick={() => {
@@ -386,56 +399,38 @@ const Index = () => {
                   }
                 }}
                 variant={selectionMode ? "default" : "outline"}
-                size="default"
-                className="h-10 font-medium"
+                size="sm"
+                className="h-8"
               >
-                <CheckSquare className="mr-2 h-4 w-4" />
-                {selectionMode ? "Done Selecting" : "Select Posts"}
+                <CheckSquare className="mr-1 h-3 w-3" />
+                {selectionMode ? "Done" : "Select"}
               </Button>
             </div>
+
+            {/* Mobile Filter Button */}
+            <div className="lg:hidden">
+              <MobileFilterSheet
+                categories={categories}
+                tags={allTags}
+                posts={allPosts}
+                folders={folders}
+                selectedFolder={selectedFolder}
+                selectedCategory={selectedCategory}
+                selectedTags={selectedTags}
+                filterUsed={filterUsed}
+                onFolderChange={setSelectedFolder}
+                onCategoryChange={setSelectedCategory}
+                onTagsChange={setSelectedTags}
+                onUsedFilterChange={setFilterUsed}
+              />
+            </div>
           </div>
-        </header>
 
-        {/* Search */}
-        <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-
-        {/* Mobile Filter Button */}
-        <div className="mt-4 lg:hidden">
-          <MobileFilterSheet
-            categories={categories}
-            tags={allTags}
-            posts={allPosts}
-            folders={folders}
-            selectedFolder={selectedFolder}
-            selectedCategory={selectedCategory}
-            selectedTags={selectedTags}
-            filterUsed={filterUsed}
-            onFolderChange={setSelectedFolder}
-            onCategoryChange={setSelectedCategory}
-            onTagsChange={setSelectedTags}
-            onUsedFilterChange={setFilterUsed}
-          />
-        </div>
-
-        {/* Main Content Area */}
-        <div className="mt-6 sm:mt-8 grid gap-6 lg:grid-cols-[280px_1fr]">
-          {/* Desktop Sidebar */}
-          <div className="hidden lg:block">
-            <FilterSidebar
-              categories={categories}
-              tags={allTags}
-              posts={allPosts}
-              folders={folders}
-              selectedFolder={selectedFolder}
-              selectedCategory={selectedCategory}
-              selectedTags={selectedTags}
-              filterUsed={filterUsed}
-              onFolderChange={setSelectedFolder}
-              onCategoryChange={setSelectedCategory}
-              onTagsChange={setSelectedTags}
-              onUsedFilterChange={setFilterUsed}
-            />
-          </div>
+          {/* Post Count */}
+          <p className="text-sm text-muted-foreground mb-4">
+            {filteredCount} posts
+            {filteredCount !== totalPosts && ` (of ${totalPosts})`}
+          </p>
 
           {/* Posts Grid */}
           <PostGrid 
@@ -448,43 +443,43 @@ const Index = () => {
             onToggleSelection={handleToggleSelection}
             folders={folders}
           />
-        </div>
-
-        {/* Add Post Dialog */}
-        <AddPostDialog open={showAddDialog} onOpenChange={setShowAddDialog} onSuccess={refetch} />
-
-        {/* Bulk Import Dialog */}
-        <BulkImportDialog
-          open={showBulkImportDialog}
-          onOpenChange={setShowBulkImportDialog}
-          onSuccess={refetch}
-        />
-
-        {/* Add Folder Dialog */}
-        <AddFolderDialog
-          open={showAddFolderDialog}
-          onOpenChange={setShowAddFolderDialog}
-          onFolderAdded={() => {
-            refetchFolders();
-            refetch();
-          }}
-        />
-
-        {/* Bulk Actions Bar */}
-        {selectionMode && (
-          <BulkActionsBar
-            selectedCount={selectedPostIds.size}
-            totalCount={sortedPosts.length}
-            onSelectAll={handleSelectAll}
-            onUnselectAll={handleUnselectAll}
-            onDelete={handleBulkDelete}
-            onMarkAsUsed={handleBulkMarkAsUsed}
-            onAutoFormat={handleBulkAutoFormat}
-            onMoveToFolder={handleBulkMoveToFolder}
-            folders={folders}
-          />
-        )}
+        </main>
       </div>
+
+      {/* Add Post Dialog */}
+      <AddPostDialog open={showAddDialog} onOpenChange={setShowAddDialog} onSuccess={refetch} />
+
+      {/* Bulk Import Dialog */}
+      <BulkImportDialog
+        open={showBulkImportDialog}
+        onOpenChange={setShowBulkImportDialog}
+        onSuccess={refetch}
+      />
+
+      {/* Add Folder Dialog */}
+      <AddFolderDialog
+        open={showAddFolderDialog}
+        onOpenChange={setShowAddFolderDialog}
+        onFolderAdded={() => {
+          refetchFolders();
+          refetch();
+        }}
+      />
+
+      {/* Bulk Actions Bar */}
+      {selectionMode && (
+        <BulkActionsBar
+          selectedCount={selectedPostIds.size}
+          totalCount={sortedPosts.length}
+          onSelectAll={handleSelectAll}
+          onUnselectAll={handleUnselectAll}
+          onDelete={handleBulkDelete}
+          onMarkAsUsed={handleBulkMarkAsUsed}
+          onAutoFormat={handleBulkAutoFormat}
+          onMoveToFolder={handleBulkMoveToFolder}
+          folders={folders}
+        />
+      )}
       <Toaster />
     </div>
   );
