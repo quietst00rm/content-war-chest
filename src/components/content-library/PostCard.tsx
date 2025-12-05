@@ -52,7 +52,7 @@ export const PostCard = ({
 
   const categoryStyle = getCategoryStyle(post.primary_category);
   const categoryEmoji = getCategoryEmoji(post.primary_category);
-  const statusStyle = STATUS_STYLES[post.status || 'draft'];
+  const statusStyle = STATUS_STYLES[(post.status as PostStatus) || 'draft'] || STATUS_STYLES['draft'];
 
   // Preview: first 2 lines only
   const previewLines = post.content.split('\n').filter(line => line.trim()).slice(0, 2).join(' ');
