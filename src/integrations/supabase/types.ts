@@ -166,6 +166,162 @@ export type Database = {
         }
         Relationships: []
       }
+      hook_variants: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+          hook_text: string
+          is_primary: boolean
+          source: string
+          times_used: number
+          avg_performance_score: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+          hook_text: string
+          is_primary?: boolean
+          source: string
+          times_used?: number
+          avg_performance_score?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          user_id?: string
+          hook_text?: string
+          is_primary?: boolean
+          source?: string
+          times_used?: number
+          avg_performance_score?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hook_variants_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      performance_logs: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+          platform: string
+          logged_at: string
+          posted_at: string | null
+          impressions: number | null
+          likes: number | null
+          comments: number | null
+          shares: number | null
+          clicks: number | null
+          engagement_rate: number | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+          platform: string
+          logged_at?: string
+          posted_at?: string | null
+          impressions?: number | null
+          likes?: number | null
+          comments?: number | null
+          shares?: number | null
+          clicks?: number | null
+          engagement_rate?: number | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          user_id?: string
+          platform?: string
+          logged_at?: string
+          posted_at?: string | null
+          impressions?: number | null
+          likes?: number | null
+          comments?: number | null
+          shares?: number | null
+          clicks?: number | null
+          engagement_rate?: number | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_logs_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      platform_versions: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+          platform: string
+          content: string
+          formatted_content: string | null
+          character_count: number | null
+          is_primary: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+          platform: string
+          content: string
+          formatted_content?: string | null
+          character_count?: number | null
+          is_primary?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          user_id?: string
+          platform?: string
+          content?: string
+          formatted_content?: string | null
+          character_count?: number | null
+          is_primary?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_versions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       posts: {
         Row: {
           character_count: number | null
@@ -178,7 +334,10 @@ export type Database = {
           is_used: boolean | null
           notes: string | null
           primary_category: string
+          scheduled_for: string | null
+          scheduled_platform: string | null
           source_section: string | null
+          status: string
           subcategory: string | null
           summary: string | null
           tags: string[] | null
@@ -200,7 +359,10 @@ export type Database = {
           is_used?: boolean | null
           notes?: string | null
           primary_category: string
+          scheduled_for?: string | null
+          scheduled_platform?: string | null
           source_section?: string | null
+          status?: string
           subcategory?: string | null
           summary?: string | null
           tags?: string[] | null
@@ -222,7 +384,10 @@ export type Database = {
           is_used?: boolean | null
           notes?: string | null
           primary_category?: string
+          scheduled_for?: string | null
+          scheduled_platform?: string | null
           source_section?: string | null
+          status?: string
           subcategory?: string | null
           summary?: string | null
           tags?: string[] | null
