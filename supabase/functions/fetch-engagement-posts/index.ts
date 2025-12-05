@@ -223,12 +223,12 @@ serve(async (req) => {
     const { profile_ids, max_posts_per_profile } = validationResult.data;
 
     // Get environment variables
-    const APIFY_API_TOKEN = Deno.env.get('APIFY_API_TOKEN');
+    const APIFY_API_KEY = Deno.env.get('APIFY_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!APIFY_API_TOKEN) {
-      throw new Error('APIFY_API_TOKEN is not configured');
+    if (!APIFY_API_KEY) {
+      throw new Error('APIFY_API_KEY is not configured');
     }
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -284,7 +284,7 @@ serve(async (req) => {
     const targetUrls = profiles.map(p => p.linkedin_url);
 
     // Start Apify actor run
-    const runId = await startActorRun(APIFY_API_TOKEN, targetUrls, max_posts_per_profile);
+    const runId = await startActorRun(APIFY_API_KEY, targetUrls, max_posts_per_profile);
     if (!runId) {
       throw new Error('Failed to start Apify actor run');
     }
@@ -292,13 +292,13 @@ serve(async (req) => {
     console.log(`Apify run started: ${runId}`);
 
     // Poll for completion
-    const completed = await pollRunStatus(APIFY_API_TOKEN, runId);
+    const completed = await pollRunStatus(APIFY_API_KEY, runId);
     if (!completed) {
       throw new Error('Apify run timed out or failed');
     }
 
     // Get results
-    const posts = await getRunResults(APIFY_API_TOKEN, runId);
+    const posts = await getRunResults(APIFY_API_KEY, runId);
     console.log(`Received ${posts.length} posts from Apify`);
 
     // Process and save posts
