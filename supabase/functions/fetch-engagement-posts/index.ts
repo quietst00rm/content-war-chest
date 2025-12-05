@@ -352,6 +352,15 @@ serve(async (req) => {
         skippedCount++;
       } else {
         savedCount++;
+
+        // Update profile name if we discovered it and profile doesn't have one
+        if (post.author?.name && !profile.name) {
+          await supabase
+            .from('followed_profiles')
+            .update({ name: post.author.name })
+            .eq('id', profile.id);
+          console.log(`Updated profile ${profile.id} name to: ${post.author.name}`);
+        }
       }
     }
 
