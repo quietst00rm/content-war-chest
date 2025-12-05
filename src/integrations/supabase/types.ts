@@ -24,6 +24,7 @@ export type Database = {
           author_name: string | null
           author_profile_url: string | null
           author_title: string | null
+          author_profile_image_url: string | null
           content: string
           posted_at: string | null
           posted_ago_text: string | null
@@ -50,6 +51,7 @@ export type Database = {
           author_name?: string | null
           author_profile_url?: string | null
           author_title?: string | null
+          author_profile_image_url?: string | null
           content: string
           posted_at?: string | null
           posted_ago_text?: string | null
@@ -76,6 +78,7 @@ export type Database = {
           author_name?: string | null
           author_profile_url?: string | null
           author_title?: string | null
+          author_profile_image_url?: string | null
           content?: string
           posted_at?: string | null
           posted_ago_text?: string | null
@@ -109,6 +112,8 @@ export type Database = {
           user_id: string
           linkedin_url: string
           name: string | null
+          title: string | null
+          profile_image_url: string | null
           notes: string | null
           is_active: boolean
           last_fetched_at: string | null
@@ -120,6 +125,8 @@ export type Database = {
           user_id: string
           linkedin_url: string
           name?: string | null
+          title?: string | null
+          profile_image_url?: string | null
           notes?: string | null
           is_active?: boolean
           last_fetched_at?: string | null
@@ -131,6 +138,8 @@ export type Database = {
           user_id?: string
           linkedin_url?: string
           name?: string | null
+          title?: string | null
+          profile_image_url?: string | null
           notes?: string | null
           is_active?: boolean
           last_fetched_at?: string | null
