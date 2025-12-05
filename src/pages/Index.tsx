@@ -14,7 +14,8 @@ import { BulkActionsBar } from "@/components/content-library/BulkActionsBar";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Plus, Upload, Grid3x3, List, LogOut, User, FolderPlus, CheckSquare } from "lucide-react";
+import { Plus, Upload, Grid3x3, List, LogOut, User, FolderPlus, CheckSquare, MessageCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -284,6 +285,12 @@ const Index = () => {
           Content War Chest
         </h1>
         <div className="flex items-center gap-2">
+          <Link to="/engagement">
+            <Button variant="ghost" size="sm" className="h-9 gap-1.5" aria-label="Engagement Feed">
+              <MessageCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Engage</span>
+            </Button>
+          </Link>
           <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
