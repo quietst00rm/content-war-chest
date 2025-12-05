@@ -6,7 +6,16 @@ import { Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { getCategoryEmoji, getCategoryStyle } from "@/lib/categories";
-import type { Post } from "@/pages/Index";
+import type { Post, PostStatus } from "@/pages/Index";
+
+const STATUS_STYLES: Record<PostStatus, { bg: string; text: string; label: string }> = {
+  idea: { bg: 'bg-purple-500/20', text: 'text-purple-600 dark:text-purple-400', label: 'Idea' },
+  draft: { bg: 'bg-gray-500/20', text: 'text-gray-600 dark:text-gray-400', label: 'Draft' },
+  ready: { bg: 'bg-green-500/20', text: 'text-green-600 dark:text-green-400', label: 'Ready' },
+  scheduled: { bg: 'bg-blue-500/20', text: 'text-blue-600 dark:text-blue-400', label: 'Scheduled' },
+  used: { bg: 'bg-orange-500/20', text: 'text-orange-600 dark:text-orange-400', label: 'Used' },
+  archived: { bg: 'bg-red-500/20', text: 'text-red-600 dark:text-red-400', label: 'Archived' },
+};
 
 interface PostCardProps {
   post: Post;
@@ -43,6 +52,7 @@ export const PostCard = ({
 
   const categoryStyle = getCategoryStyle(post.primary_category);
   const categoryEmoji = getCategoryEmoji(post.primary_category);
+  const statusStyle = STATUS_STYLES[post.status || 'draft'];
 
   // Preview: first 2 lines only
   const previewLines = post.content.split('\n').filter(line => line.trim()).slice(0, 2).join(' ');
@@ -69,17 +79,22 @@ export const PostCard = ({
         </div>
       )}
 
-      {/* Category Badge */}
-      <Badge
-        style={{
-          backgroundColor: categoryStyle.backgroundColor,
-          color: categoryStyle.color,
-          border: 'none',
-        }}
-        className="text-xs font-medium px-2 py-0.5 rounded-full w-fit"
-      >
-        {categoryEmoji} {post.primary_category}
-      </Badge>
+      {/* Category + Status Row */}
+      <div className="flex items-center gap-2">
+        <Badge
+          style={{
+            backgroundColor: categoryStyle.backgroundColor,
+            color: categoryStyle.color,
+            border: 'none',
+          }}
+          className="text-xs font-medium px-2 py-0.5 rounded-full w-fit"
+        >
+          {categoryEmoji} {post.primary_category}
+        </Badge>
+        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${statusStyle.bg} ${statusStyle.text}`}>
+          {statusStyle.label}
+        </span>
+      </div>
 
       {/* Title */}
       <h3 className="text-base font-semibold text-foreground mt-2 mb-1 line-clamp-2 leading-tight">
