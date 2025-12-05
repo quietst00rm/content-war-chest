@@ -40,7 +40,7 @@ export interface Post {
   is_favorite: boolean;
   created_at: string;
   updated_at: string;
-  user_id: string | null;
+  user_id: string;
   folder_id: string | null;
 }
 
