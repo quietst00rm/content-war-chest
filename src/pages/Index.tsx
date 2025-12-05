@@ -21,8 +21,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CATEGORIES } from "@/lib/categories";
 
-export type PostStatus = 'idea' | 'draft' | 'ready' | 'scheduled' | 'used' | 'archived';
-
 export interface Post {
   id: string;
   title: string;
@@ -44,9 +42,6 @@ export interface Post {
   updated_at: string;
   user_id: string | null;
   folder_id: string | null;
-  status: PostStatus;
-  scheduled_for: string | null;
-  scheduled_platform: string | null;
 }
 
 const Index = () => {
@@ -55,7 +50,6 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [filterUsed, setFilterUsed] = useState<"all" | "used" | "unused">("all");
-  const [filterStatus, setFilterStatus] = useState<PostStatus | 'all'>('all');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showBulkImportDialog, setShowBulkImportDialog] = useState(false);
@@ -92,7 +86,7 @@ const Index = () => {
   });
 
   const { data: posts = [], isLoading, refetch } = useQuery({
-    queryKey: ["posts", searchQuery, selectedCategory, selectedTags, filterStatus, selectedFolder],
+    queryKey: ["posts", searchQuery, selectedCategory, selectedTags, filterUsed, selectedFolder],
     queryFn: async () => {
       let query = supabase.from("posts").select("*").order("created_at", { ascending: false });
 
@@ -111,9 +105,11 @@ const Index = () => {
         query = query.overlaps("tags", selectedTags);
       }
 
-      // Filter by status
-      if (filterStatus !== 'all') {
-        query = query.eq("status", filterStatus);
+      // Filter by used status
+      if (filterUsed === 'used') {
+        query = query.eq("is_used", true);
+      } else if (filterUsed === 'unused') {
+        query = query.eq("is_used", false);
       }
 
       if (selectedFolder === "unfiled") {
@@ -325,12 +321,10 @@ const Index = () => {
             selectedCategory={selectedCategory}
             selectedTags={selectedTags}
             filterUsed={filterUsed}
-            filterStatus={filterStatus}
             onFolderChange={setSelectedFolder}
             onCategoryChange={setSelectedCategory}
             onTagsChange={setSelectedTags}
             onUsedFilterChange={setFilterUsed}
-            onStatusFilterChange={setFilterStatus}
           />
         </aside>
 
@@ -432,12 +426,10 @@ const Index = () => {
                 selectedCategory={selectedCategory}
                 selectedTags={selectedTags}
                 filterUsed={filterUsed}
-                filterStatus={filterStatus}
                 onFolderChange={setSelectedFolder}
                 onCategoryChange={setSelectedCategory}
                 onTagsChange={setSelectedTags}
                 onUsedFilterChange={setFilterUsed}
-                onStatusFilterChange={setFilterStatus}
               />
             </div>
           </div>
