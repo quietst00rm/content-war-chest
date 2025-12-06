@@ -28,18 +28,18 @@ export interface Post {
   formatted_content: string;
   primary_category: string;
   subcategory: string | null;
-  tags: string[];
+  tags: string[] | null;
   target_audience: string | null;
   summary: string | null;
   character_count: number | null;
   source_section: string | null;
-  is_used: boolean;
+  is_used: boolean | null;
   used_at: string | null;
-  usage_count: number;
+  usage_count: number | null;
   notes: string | null;
-  is_favorite: boolean;
-  created_at: string;
-  updated_at: string;
+  is_favorite: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
   user_id: string;
   folder_id: string | null;
 }

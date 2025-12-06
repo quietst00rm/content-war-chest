@@ -26,6 +26,7 @@ export interface EngagementPost {
   author_name: string | null;
   author_profile_url: string | null;
   author_title: string | null;
+  author_profile_image_url: string | null;
   content: string;
   posted_at: string | null;
   posted_ago_text: string | null;
@@ -111,8 +112,19 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
       {/* Header: Author + Time */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <User className="h-5 w-5 text-primary" />
+          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 overflow-hidden flex items-center justify-center">
+            {post.author_profile_image_url ? (
+              <img
+                src={post.author_profile_image_url}
+                alt={post.author_name || "Author"}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+            ) : null}
+            <User className={`h-5 w-5 text-primary ${post.author_profile_image_url ? 'hidden' : ''}`} />
           </div>
           <div className="min-w-0">
             <p className="font-semibold truncate">{post.author_name || "Unknown"}</p>

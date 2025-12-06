@@ -26,6 +26,8 @@ interface ApifyPost {
     name?: string;
     linkedinUrl?: string;
     info?: string;
+    picture?: string;
+    profilePicture?: string;
   };
   postedAt?: {
     date?: string;
@@ -321,6 +323,9 @@ serve(async (req) => {
         continue;
       }
 
+      // Get profile image URL (Apify may return it as picture or profilePicture)
+      const authorImageUrl = post.author?.picture || post.author?.profilePicture || null;
+
       const engagementPost = {
         user_id: user.id,
         profile_id: profile.id,
@@ -329,6 +334,7 @@ serve(async (req) => {
         author_name: post.author?.name || profile.name || null,
         author_profile_url: post.author?.linkedinUrl || null,
         author_title: post.author?.info || null,
+        author_profile_image_url: authorImageUrl,
         content: post.content,
         posted_at: post.postedAt?.date || null,
         posted_ago_text: cleanPostedAgoText(post.postedAt?.postedAgoText),
@@ -353,13 +359,30 @@ serve(async (req) => {
       } else {
         savedCount++;
 
-        // Update profile name if we discovered it and profile doesn't have one
+        // Update profile info if we discovered new data
+        const profileUpdates: Record<string, string> = {};
+
         if (post.author?.name && !profile.name) {
+          profileUpdates.name = post.author.name;
+        }
+
+        // Get profile image URL (Apify may return it as picture or profilePicture)
+        const profileImageUrl = post.author?.picture || post.author?.profilePicture;
+        if (profileImageUrl) {
+          profileUpdates.profile_image_url = profileImageUrl;
+        }
+
+        // Get title/headline from author info
+        if (post.author?.info) {
+          profileUpdates.title = post.author.info;
+        }
+
+        if (Object.keys(profileUpdates).length > 0) {
           await supabase
             .from('followed_profiles')
-            .update({ name: post.author.name })
+            .update(profileUpdates)
             .eq('id', profile.id);
-          console.log(`Updated profile ${profile.id} name to: ${post.author.name}`);
+          console.log(`Updated profile ${profile.id}:`, Object.keys(profileUpdates));
         }
       }
     }
