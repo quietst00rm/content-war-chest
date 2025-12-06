@@ -19,7 +19,6 @@ export type Database = {
           ai_comment: string | null
           ai_comment_generated_at: string | null
           author_name: string | null
-          author_profile_image_url: string | null
           author_profile_url: string | null
           author_title: string | null
           commented_at: string | null
@@ -46,7 +45,6 @@ export type Database = {
           ai_comment?: string | null
           ai_comment_generated_at?: string | null
           author_name?: string | null
-          author_profile_image_url?: string | null
           author_profile_url?: string | null
           author_title?: string | null
           commented_at?: string | null
@@ -73,7 +71,6 @@ export type Database = {
           ai_comment?: string | null
           ai_comment_generated_at?: string | null
           author_name?: string | null
-          author_profile_image_url?: string | null
           author_profile_url?: string | null
           author_title?: string | null
           commented_at?: string | null
@@ -142,8 +139,6 @@ export type Database = {
           linkedin_url: string
           name: string | null
           notes: string | null
-          profile_image_url: string | null
-          title: string | null
           updated_at: string
           user_id: string
         }
@@ -155,8 +150,6 @@ export type Database = {
           linkedin_url: string
           name?: string | null
           notes?: string | null
-          profile_image_url?: string | null
-          title?: string | null
           updated_at?: string
           user_id: string
         }
@@ -168,8 +161,6 @@ export type Database = {
           linkedin_url?: string
           name?: string | null
           notes?: string | null
-          profile_image_url?: string | null
-          title?: string | null
           updated_at?: string
           user_id?: string
         }
