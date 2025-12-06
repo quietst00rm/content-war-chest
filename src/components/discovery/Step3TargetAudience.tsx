@@ -2,10 +2,13 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { UserStrategy, IdeaSource, TargetMarket, PrimaryOutcome } from "@/hooks/use-user-strategy";
-import { AlertTriangle, Briefcase, BookOpen, Users, Lightbulb, Heart, DollarSign, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { AlertTriangle, Briefcase, BookOpen, Users, Lightbulb, Heart, DollarSign, Sparkles, Wand2, Loader2, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 
 // Generic words that trigger a warning
 const GENERIC_WORDS = ["people", "everyone", "anyone", "businesses", "companies"];
@@ -61,6 +64,12 @@ function getOutcomeLabel(outcome: PrimaryOutcome | null): string {
   return outcome ? labels[outcome] : "";
 }
 
+interface AISuggestions {
+  refined_who: string[];
+  refined_what: string[];
+  tip: string;
+}
+
 interface Step3TargetAudienceProps {
   strategy: UserStrategy | null;
   onUpdate: (updates: Partial<UserStrategy>) => Promise<void>;
@@ -74,6 +83,8 @@ export function Step3TargetAudience({
 }: Step3TargetAudienceProps) {
   const [whoYouHelp, setWhoYouHelp] = useState(strategy?.who_you_help || "");
   const [whatYouHelp, setWhatYouHelp] = useState(strategy?.what_you_help_them_do || "");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<AISuggestions | null>(null);
 
   // Check for generic words in WHO field
   const hasGenericWord = useMemo(() => {
@@ -103,7 +114,6 @@ export function Step3TargetAudience({
   }, [strategy?.id]);
 
   const handleWhoChange = (value: string) => {
-    // Limit to 100 characters
     const limited = value.slice(0, 100);
     setWhoYouHelp(limited);
   };
@@ -115,7 +125,6 @@ export function Step3TargetAudience({
   };
 
   const handleWhatChange = (value: string) => {
-    // Limit to 150 characters
     const limited = value.slice(0, 150);
     setWhatYouHelp(limited);
   };
@@ -124,6 +133,57 @@ export function Step3TargetAudience({
     if (whatYouHelp !== strategy?.what_you_help_them_do) {
       await onUpdate({ what_you_help_them_do: whatYouHelp || null });
     }
+  };
+
+  // Generate AI suggestions
+  const handleGenerateSuggestions = async () => {
+    if (!strategy?.idea_source_details || !strategy?.target_market || !strategy?.primary_outcome) {
+      toast.error("Please complete the previous steps first");
+      return;
+    }
+
+    if (whoYouHelp.length < 5 || whatYouHelp.length < 5) {
+      toast.error("Please enter at least a rough description first");
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("discovery-ai", {
+        body: {
+          action: "refine_audience",
+          expertise: strategy.idea_source_details,
+          market: strategy.target_market,
+          outcome: strategy.primary_outcome,
+          who_you_help: whoYouHelp,
+          what_you_help_them_do: whatYouHelp,
+        },
+      });
+
+      if (error) throw error;
+
+      setAiSuggestions(data);
+      toast.success("AI suggestions generated!");
+    } catch (error) {
+      console.error("Error generating suggestions:", error);
+      toast.error("Failed to generate suggestions. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Apply a suggestion
+  const applySuggestion = async (type: "who" | "what", value: string) => {
+    if (type === "who") {
+      const limited = value.slice(0, 100);
+      setWhoYouHelp(limited);
+      await onUpdate({ who_you_help: limited });
+    } else {
+      const limited = value.slice(0, 150);
+      setWhatYouHelp(limited);
+      await onUpdate({ what_you_help_them_do: limited });
+    }
+    toast.success("Suggestion applied!");
   };
 
   // Generate live preview
@@ -136,6 +196,9 @@ export function Step3TargetAudience({
   // Get icons for context card
   const SourceIcon = getSourceIcon(strategy?.idea_source);
   const MarketIcon = getMarketIcon(strategy?.target_market);
+
+  // Check if we can generate suggestions
+  const canGenerate = whoYouHelp.length >= 5 && whatYouHelp.length >= 5 && strategy?.idea_source_details;
 
   return (
     <div className="space-y-6">
@@ -258,8 +321,103 @@ export function Step3TargetAudience({
               </span>
             </div>
           </div>
+
+          {/* AI Refine Button */}
+          <div className="pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleGenerateSuggestions}
+              disabled={!canGenerate || isGenerating}
+              className="w-full sm:w-auto gap-2"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating suggestions...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="h-4 w-4" />
+                  Refine with AI
+                </>
+              )}
+            </Button>
+            {!canGenerate && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Enter a rough description first, then AI can help refine it
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
+
+      {/* AI Suggestions */}
+      {aiSuggestions && (
+        <Card className="border-purple-500/50 bg-purple-50/50 dark:bg-purple-950/20 animate-in fade-in slide-in-from-top-4 duration-300">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Wand2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              AI Suggestions
+            </CardTitle>
+            <CardDescription>
+              Click any suggestion to apply it
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Who suggestions */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                Who you help
+              </Label>
+              <div className="space-y-2">
+                {aiSuggestions.refined_who.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => applySuggestion("who", suggestion)}
+                    className="w-full text-left p-3 rounded-lg border border-purple-200 dark:border-purple-800 hover:border-purple-400 dark:hover:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">{suggestion}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* What suggestions */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                What you help them do
+              </Label>
+              <div className="space-y-2">
+                {aiSuggestions.refined_what.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => applySuggestion("what", suggestion)}
+                    className="w-full text-left p-3 rounded-lg border border-purple-200 dark:border-purple-800 hover:border-purple-400 dark:hover:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">{suggestion}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tip */}
+            {aiSuggestions.tip && (
+              <div className="pt-2 border-t border-purple-200 dark:border-purple-800">
+                <p className="text-sm text-purple-700 dark:text-purple-300">
+                  <span className="font-medium">Tip:</span> {aiSuggestions.tip}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Live Preview */}
       <Card className="border-primary/50 bg-primary/5">

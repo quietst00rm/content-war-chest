@@ -1,10 +1,14 @@
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { UserStrategy, IdeaSource, TargetMarket, PrimaryOutcome, ValidationEnjoyment, ValidationLearning, ValidationLongevity, ValidationStatus } from "@/hooks/use-user-strategy";
-import { Briefcase, BookOpen, Users, Lightbulb, Heart, DollarSign, Check, X, AlertTriangle, TrendingUp } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Briefcase, BookOpen, Users, Lightbulb, Heart, DollarSign, Check, X, AlertTriangle, TrendingUp, Wand2, Loader2, Copy, Sparkles, FileText, Lightbulb as IdeaIcon } from "lucide-react";
+import { toast } from "sonner";
 
 // Helper functions for display
 function getSourceLabel(source: IdeaSource | null): string {
@@ -105,6 +109,28 @@ function getRecommendation(status: ValidationStatus | null): string {
   return status ? recommendations[status] : "";
 }
 
+interface ValueStatements {
+  headline: string;
+  bio: string;
+  elevator_pitch: string;
+  linkedin_headline: string;
+  positioning_statement: string;
+}
+
+interface ContentIdeas {
+  pillar_topics: string[];
+  content_ideas: Array<{
+    title: string;
+    type: string;
+    angle: string;
+  }>;
+  lead_magnet_ideas: string[];
+  content_series: {
+    name: string;
+    description: string;
+  };
+}
+
 interface Step5SummaryProps {
   strategy: UserStrategy | null;
   calculateValidationScore: (
@@ -115,6 +141,11 @@ interface Step5SummaryProps {
 }
 
 export function Step5Summary({ strategy, calculateValidationScore }: Step5SummaryProps) {
+  const [isGeneratingStatements, setIsGeneratingStatements] = useState(false);
+  const [isGeneratingContent, setIsGeneratingContent] = useState(false);
+  const [valueStatements, setValueStatements] = useState<ValueStatements | null>(null);
+  const [contentIdeas, setContentIdeas] = useState<ContentIdeas | null>(null);
+
   // Calculate validation score
   const { score, status } = useMemo(() => {
     return calculateValidationScore(
@@ -162,6 +193,80 @@ export function Step5Summary({ strategy, calculateValidationScore }: Step5Summar
       isNeutral: strategy?.validation_longevity === "unsure",
     },
   ];
+
+  // Generate AI value statements
+  const handleGenerateStatements = async () => {
+    if (!strategy?.idea_source_details || !strategy?.target_market || !strategy?.primary_outcome || !strategy?.who_you_help || !strategy?.what_you_help_them_do) {
+      toast.error("Please complete all steps first");
+      return;
+    }
+
+    setIsGeneratingStatements(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("discovery-ai", {
+        body: {
+          action: "generate_value_statements",
+          expertise: strategy.idea_source_details,
+          expertise_source: getSourceLabel(strategy.idea_source),
+          market: strategy.target_market,
+          outcome: strategy.primary_outcome,
+          who_you_help: strategy.who_you_help,
+          what_you_help_them_do: strategy.what_you_help_them_do,
+        },
+      });
+
+      if (error) throw error;
+
+      setValueStatements(data);
+      toast.success("Value statements generated!");
+    } catch (error) {
+      console.error("Error generating statements:", error);
+      toast.error("Failed to generate statements. Please try again.");
+    } finally {
+      setIsGeneratingStatements(false);
+    }
+  };
+
+  // Generate AI content ideas
+  const handleGenerateContent = async () => {
+    if (!strategy?.idea_source_details || !strategy?.target_market || !strategy?.primary_outcome || !strategy?.who_you_help || !strategy?.what_you_help_them_do) {
+      toast.error("Please complete all steps first");
+      return;
+    }
+
+    setIsGeneratingContent(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("discovery-ai", {
+        body: {
+          action: "generate_content_ideas",
+          expertise: strategy.idea_source_details,
+          market: strategy.target_market,
+          outcome: strategy.primary_outcome,
+          who_you_help: strategy.who_you_help,
+          what_you_help_them_do: strategy.what_you_help_them_do,
+          expansion_potential: strategy.expansion_potential,
+        },
+      });
+
+      if (error) throw error;
+
+      setContentIdeas(data);
+      toast.success("Content ideas generated!");
+    } catch (error) {
+      console.error("Error generating content:", error);
+      toast.error("Failed to generate content ideas. Please try again.");
+    } finally {
+      setIsGeneratingContent(false);
+    }
+  };
+
+  // Copy to clipboard
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard!`);
+  };
+
+  const canGenerate = strategy?.idea_source_details && strategy?.target_market && strategy?.primary_outcome && strategy?.who_you_help && strategy?.what_you_help_them_do;
 
   return (
     <div className="space-y-6">
@@ -234,10 +339,123 @@ export function Step5Summary({ strategy, calculateValidationScore }: Step5Summar
             Your Value Statement
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <p className="text-xl font-semibold text-primary">
             {valueStatement}
           </p>
+
+          {/* AI Value Statement Generator */}
+          <div className="pt-2 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleGenerateStatements}
+              disabled={!canGenerate || isGeneratingStatements}
+              className="w-full sm:w-auto gap-2"
+            >
+              {isGeneratingStatements ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating variations...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="h-4 w-4" />
+                  Generate AI Variations
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* AI Generated Statements */}
+          {valueStatements && (
+            <div className="space-y-3 pt-2 animate-in fade-in slide-in-from-top-4 duration-300">
+              <Tabs defaultValue="headline" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="headline" className="text-xs">Headline</TabsTrigger>
+                  <TabsTrigger value="bio" className="text-xs">Bio</TabsTrigger>
+                  <TabsTrigger value="pitch" className="text-xs">Pitch</TabsTrigger>
+                  <TabsTrigger value="linkedin" className="text-xs">LinkedIn</TabsTrigger>
+                </TabsList>
+                <TabsContent value="headline" className="mt-3">
+                  <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
+                    <p className="text-lg font-semibold">{valueStatements.headline}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(valueStatements.headline, "Headline")}
+                      className="mt-2 h-8 text-xs"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copy
+                    </Button>
+                  </div>
+                </TabsContent>
+                <TabsContent value="bio" className="mt-3">
+                  <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
+                    <p className="text-sm">{valueStatements.bio}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(valueStatements.bio, "Bio")}
+                      className="mt-2 h-8 text-xs"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copy
+                    </Button>
+                  </div>
+                </TabsContent>
+                <TabsContent value="pitch" className="mt-3">
+                  <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
+                    <p className="text-sm">{valueStatements.elevator_pitch}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(valueStatements.elevator_pitch, "Elevator pitch")}
+                      className="mt-2 h-8 text-xs"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copy
+                    </Button>
+                  </div>
+                </TabsContent>
+                <TabsContent value="linkedin" className="mt-3">
+                  <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
+                    <p className="text-sm">{valueStatements.linkedin_headline}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{valueStatements.linkedin_headline.length}/120 characters</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(valueStatements.linkedin_headline, "LinkedIn headline")}
+                      className="mt-2 h-8 text-xs"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copy
+                    </Button>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              {valueStatements.positioning_statement && (
+                <div className="p-4 rounded-lg bg-muted/50 border">
+                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    Positioning Statement
+                  </h4>
+                  <p className="text-sm italic">{valueStatements.positioning_statement}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(valueStatements.positioning_statement, "Positioning statement")}
+                    className="mt-2 h-8 text-xs"
+                  >
+                    <Copy className="h-3 w-3 mr-1" />
+                    Copy
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -327,6 +545,121 @@ export function Step5Summary({ strategy, calculateValidationScore }: Step5Summar
           </CardContent>
         </Card>
       )}
+
+      {/* Section F: AI Content Ideas */}
+      <Card className="border-purple-500/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <IdeaIcon className="h-4 w-4" />
+            Content Ideas
+          </CardTitle>
+          <CardDescription>
+            Get AI-generated content ideas tailored to your expertise
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!contentIdeas ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleGenerateContent}
+              disabled={!canGenerate || isGeneratingContent}
+              className="w-full sm:w-auto gap-2"
+            >
+              {isGeneratingContent ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating content ideas...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="h-4 w-4" />
+                  Generate Content Ideas
+                </>
+              )}
+            </Button>
+          ) : (
+            <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+              {/* Pillar Topics */}
+              <div>
+                <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  Your Content Pillars
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {contentIdeas.pillar_topics.map((topic, index) => (
+                    <Badge key={index} variant="secondary" className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                      {topic}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Content Ideas */}
+              <div>
+                <h4 className="text-sm font-medium mb-3">Post Ideas</h4>
+                <div className="grid gap-2">
+                  {contentIdeas.content_ideas.slice(0, 5).map((idea, index) => (
+                    <div key={index} className="p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-medium text-sm">{idea.title}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{idea.angle}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          {idea.type}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {contentIdeas.content_ideas.length > 5 && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    +{contentIdeas.content_ideas.length - 5} more ideas
+                  </p>
+                )}
+              </div>
+
+              {/* Lead Magnets */}
+              <div>
+                <h4 className="text-sm font-medium mb-2">Lead Magnet Ideas</h4>
+                <ul className="space-y-1">
+                  {contentIdeas.lead_magnet_ideas.map((idea, index) => (
+                    <li key={index} className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                      {idea}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Content Series */}
+              {contentIdeas.content_series && (
+                <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
+                  <h4 className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">
+                    Content Series: {contentIdeas.content_series.name}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    {contentIdeas.content_series.description}
+                  </p>
+                </div>
+              )}
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleGenerateContent}
+                disabled={isGeneratingContent}
+                className="gap-2"
+              >
+                <Wand2 className="h-3 w-3" />
+                Regenerate Ideas
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
