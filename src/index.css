@@ -54,24 +54,24 @@
   }
 
   .dark {
-    /* Dark Theme - Primary (Deep Navy → Dark Slate) */
+    /* Dark Theme - "Signal in the Static" */
     --background: 229 84% 5%;
     --foreground: 210 20% 98%;
 
-    --card: 222 47% 11%;
+    --card: 222 47% 9%;
     --card-foreground: 210 20% 98%;
 
-    --popover: 222 47% 11%;
+    --popover: 222 47% 9%;
     --popover-foreground: 210 20% 98%;
 
     --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 30% 18%;
-    --secondary-foreground: 210 20% 98%;
+    --secondary: 222 30% 15%;
+    --secondary-foreground: 210 20% 90%;
 
-    --muted: 222 30% 18%;
-    --muted-foreground: 220 10% 75%;
+    --muted: 222 30% 15%;
+    --muted-foreground: 215 16% 65%;
 
     --accent: 221 83% 53%;
     --accent-foreground: 0 0% 100%;
@@ -82,17 +82,17 @@
     --success: 82 78% 55%;
     --success-foreground: 82 78% 15%;
 
-    --border: 222 30% 18%;
-    --input: 222 30% 18%;
+    --border: 222 25% 22%;
+    --input: 222 25% 18%;
     --ring: 221 83% 53%;
     
-    --sidebar-background: 222 47% 11%;
+    --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 210 20% 98%;
     --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 30% 18%;
+    --sidebar-accent: 222 30% 15%;
     --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 222 30% 18%;
+    --sidebar-border: 222 25% 22%;
     --sidebar-ring: 221 83% 53%;
   }
 }
@@ -130,10 +130,29 @@
   }
 
   .glow-primary {
-    box-shadow: 0 0 40px hsl(221 83% 53% / 0.3);
+    box-shadow: 0 0 30px hsl(221 83% 53% / 0.25);
   }
 
   .glow-success {
-    box-shadow: 0 0 40px hsl(82 78% 55% / 0.3);
+    box-shadow: 0 0 30px hsl(82 78% 55% / 0.25);
+  }
+
+  /* Premium card with subtle depth */
+  .card-elevated {
+    background: linear-gradient(180deg, hsl(222 47% 10%) 0%, hsl(222 47% 8%) 100%);
+    box-shadow: 
+      0 1px 2px hsl(0 0% 0% / 0.3),
+      0 4px 12px hsl(0 0% 0% / 0.2),
+      inset 0 1px 0 hsl(0 0% 100% / 0.03);
+  }
+
+  /* Refined text for headers */
+  .text-refined {
+    text-shadow: 0 1px 2px hsl(0 0% 0% / 0.3);
+  }
+
+  /* Premium button glow on hover */
+  .button-glow:hover {
+    box-shadow: 0 0 20px hsl(221 83% 53% / 0.4);
   }
 }
