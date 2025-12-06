@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Engagement from "./pages/Engagement";
+import Discovery from "./pages/Discovery";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Engagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/discovery"
+                element={
+                  <ProtectedRoute>
+                    <Discovery />
                   </ProtectedRoute>
                 }
               />
