@@ -296,7 +296,7 @@ const Index = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Minimal Header */}
       <header className="h-14 border-b border-border flex items-center justify-between px-4 shrink-0">
-        <h1 className="text-xl font-bold gradient-primary-text">
+        <h1 className="text-xl font-bold text-foreground tracking-tight">
           Own The Noise
         </h1>
         <div className="flex items-center gap-2">
