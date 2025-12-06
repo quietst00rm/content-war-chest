@@ -23,8 +23,6 @@ interface FollowedProfile {
   id: string;
   linkedin_url: string;
   name: string | null;
-  title: string | null;
-  profile_image_url: string | null;
   notes: string | null;
   is_active: boolean;
   last_fetched_at: string | null;
@@ -371,19 +369,7 @@ export const ManageProfilesDialog = ({
                   >
                     {/* Profile Image */}
                     <div className="flex-shrink-0 h-10 w-10 rounded-full bg-muted overflow-hidden flex items-center justify-center">
-                      {profile.profile_image_url ? (
-                        <img
-                          src={profile.profile_image_url}
-                          alt={profile.name || "Profile"}
-                          className="h-full w-full object-cover"
-                          onError={(e) => {
-                            // Fallback to User icon if image fails to load
-                            e.currentTarget.style.display = 'none';
-                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                          }}
-                        />
-                      ) : null}
-                      <User className={`h-5 w-5 text-muted-foreground ${profile.profile_image_url ? 'hidden' : ''}`} />
+                      <User className="h-5 w-5 text-muted-foreground" />
                     </div>
 
                     {/* Profile Info */}
@@ -391,11 +377,6 @@ export const ManageProfilesDialog = ({
                       <p className="font-medium truncate">
                         {profile.name || extractUsername(profile.linkedin_url)}
                       </p>
-                      {profile.title && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {profile.title}
-                        </p>
-                      )}
                       <a
                         href={profile.linkedin_url}
                         target="_blank"
