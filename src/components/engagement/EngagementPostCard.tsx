@@ -13,11 +13,22 @@ import {
   Heart,
   Share2,
   CheckCircle,
-  Eye,
   EyeOff,
   User,
   Sparkles,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
+
+interface AIComment {
+  type: "experience" | "value-add" | "question";
+  text: string;
+}
+
+interface AICommentsData {
+  comments: AIComment[];
+  generated_at: string;
+}
 
 export interface EngagementPost {
   id: string;
@@ -43,10 +54,69 @@ interface EngagementPostCardProps {
   post: EngagementPost;
 }
 
+const TYPE_LABELS: Record<string, string> = {
+  experience: "Experience",
+  "value-add": "Value-Add",
+  question: "Question",
+};
+
 export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [copiedCommentIndex, setCopiedCommentIndex] = useState<number | null>(null);
   const queryClient = useQueryClient();
+
+  // Parse existing AI comments from database
+  const parseAIComments = (): AICommentsData | null => {
+    if (!post.ai_comment) return null;
+    try {
+      const parsed = JSON.parse(post.ai_comment);
+      if (parsed.comments && Array.isArray(parsed.comments)) {
+        return parsed as AICommentsData;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const [aiComments, setAIComments] = useState<AICommentsData | null>(parseAIComments);
+
+  // Generate comments mutation
+  const generateCommentsMutation = useMutation({
+    mutationFn: async () => {
+      if (post.content.length < 50) {
+        throw new Error("Post too short to analyze");
+      }
+
+      const { data, error } = await supabase.functions.invoke("generate-engagement-comments", {
+        body: {
+          post_content: post.content,
+          author_name: post.author_name || "Unknown",
+          author_title: post.author_title || "",
+        },
+      });
+
+      if (error) throw error;
+      return data as AICommentsData;
+    },
+    onSuccess: async (data) => {
+      setAIComments(data);
+
+      // Save to database
+      const { error } = await supabase
+        .from("engagement_posts")
+        .update({ ai_comment: JSON.stringify(data) })
+        .eq("id", post.id);
+
+      if (error) {
+        console.error("Failed to save comments:", error);
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Couldn't generate comments. Try again.");
+    },
+  });
 
   // Mark as commented mutation
   const markCommentedMutation = useMutation({
@@ -92,6 +162,28 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast.success("Content copied");
+  };
+
+  const handleCopyComment = async (index: number, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedCommentIndex(index);
+      setTimeout(() => setCopiedCommentIndex(null), 2000);
+      toast.success("Comment copied!");
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopiedCommentIndex(index);
+      setTimeout(() => setCopiedCommentIndex(null), 2000);
+      toast.success("Comment copied!");
+    }
   };
 
   const handleOpenPost = () => {
@@ -157,23 +249,86 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
         </span>
       </div>
 
-      {/* AI Comment Placeholder */}
-      {post.ai_comment ? (
-        <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20">
-          <div className="flex items-center gap-2 text-xs text-primary mb-1">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span className="font-medium">Suggested Comment</span>
+      {/* AI Comments Section */}
+      <div className="mb-4">
+        {aiComments ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-primary">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="font-medium">AI Comment Options</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => generateCommentsMutation.mutate()}
+                disabled={generateCommentsMutation.isPending}
+              >
+                <RefreshCw className={`h-3 w-3 mr-1 ${generateCommentsMutation.isPending ? "animate-spin" : ""}`} />
+                Regenerate
+              </Button>
+            </div>
+
+            {/* Comment Cards */}
+            <div className="space-y-2">
+              {aiComments.comments.map((comment, index) => (
+                <div
+                  key={index}
+                  className="p-3 rounded-lg bg-muted/50 border border-border hover:border-primary/30 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 mb-1.5">
+                        {TYPE_LABELS[comment.type] || comment.type}
+                      </Badge>
+                      <p className="text-sm leading-relaxed">{comment.text}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-11 w-11 p-0 flex-shrink-0"
+                      onClick={() => handleCopyComment(index, comment.text)}
+                    >
+                      {copiedCommentIndex === index ? (
+                        <Check className="h-4 w-4 text-success" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <p className="text-sm">{post.ai_comment}</p>
-        </div>
-      ) : (
-        <div className="mb-4 p-3 rounded-lg bg-muted/50 border border-dashed border-muted-foreground/30">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>AI comment suggestions coming soon</span>
+        ) : (
+          <div className="p-3 rounded-lg bg-muted/50 border border-dashed border-muted-foreground/30">
+            <Button
+              variant="ghost"
+              className="w-full h-auto py-3 flex flex-col items-center gap-2"
+              onClick={() => generateCommentsMutation.mutate()}
+              disabled={generateCommentsMutation.isPending || post.content.length < 50}
+            >
+              {generateCommentsMutation.isPending ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Generating comments...</span>
+                </>
+              ) : post.content.length < 50 ? (
+                <>
+                  <Sparkles className="h-5 w-5 text-muted-foreground/50" />
+                  <span className="text-sm text-muted-foreground">Post too short to analyze</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-medium">Generate AI Comments</span>
+                </>
+              )}
+            </Button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Action Buttons - Large tap targets for mobile */}
       <div className="flex flex-col gap-2">
