@@ -245,73 +245,73 @@ export type Database = {
       }
       user_strategy: {
         Row: {
-          id: string
-          user_id: string
-          idea_source: "practical_experience" | "learned_obsession" | "advice_sought" | "problem_solved" | null
-          idea_source_details: string | null
-          years_experience: number | null
-          target_market: "health" | "wealth" | "relationships" | null
-          primary_outcome: "make_money" | "save_money" | "save_time" | "health_fitness" | "attractiveness" | "peace_of_mind" | null
-          who_you_help: string | null
-          what_you_help_them_do: string | null
-          validation_enjoyment: "yes" | "somewhat" | "no" | null
-          validation_learning: "yes" | "somewhat" | "no" | null
-          validation_longevity: "yes" | "probably" | "unsure" | "no" | null
+          created_at: string | null
+          current_step: number | null
           expansion_potential: string | null
-          validation_score: number | null
-          validation_status: "strong" | "moderate" | "weak" | null
-          value_statement_seed: string | null
-          current_step: number
-          stage_1_completed: boolean
+          id: string
+          idea_source: string | null
+          idea_source_details: string | null
+          primary_outcome: string | null
+          stage_1_completed: boolean | null
           stage_1_completed_at: string | null
-          created_at: string
-          updated_at: string
+          target_market: string | null
+          updated_at: string | null
+          user_id: string
+          validation_enjoyment: string | null
+          validation_learning: string | null
+          validation_longevity: string | null
+          validation_score: number | null
+          validation_status: string | null
+          value_statement_seed: string | null
+          what_you_help_them_do: string | null
+          who_you_help: string | null
+          years_experience: number | null
         }
         Insert: {
-          id?: string
-          user_id: string
-          idea_source?: "practical_experience" | "learned_obsession" | "advice_sought" | "problem_solved" | null
-          idea_source_details?: string | null
-          years_experience?: number | null
-          target_market?: "health" | "wealth" | "relationships" | null
-          primary_outcome?: "make_money" | "save_money" | "save_time" | "health_fitness" | "attractiveness" | "peace_of_mind" | null
-          who_you_help?: string | null
-          what_you_help_them_do?: string | null
-          validation_enjoyment?: "yes" | "somewhat" | "no" | null
-          validation_learning?: "yes" | "somewhat" | "no" | null
-          validation_longevity?: "yes" | "probably" | "unsure" | "no" | null
+          created_at?: string | null
+          current_step?: number | null
           expansion_potential?: string | null
-          validation_score?: number | null
-          validation_status?: "strong" | "moderate" | "weak" | null
-          value_statement_seed?: string | null
-          current_step?: number
-          stage_1_completed?: boolean
+          id?: string
+          idea_source?: string | null
+          idea_source_details?: string | null
+          primary_outcome?: string | null
+          stage_1_completed?: boolean | null
           stage_1_completed_at?: string | null
-          created_at?: string
-          updated_at?: string
+          target_market?: string | null
+          updated_at?: string | null
+          user_id: string
+          validation_enjoyment?: string | null
+          validation_learning?: string | null
+          validation_longevity?: string | null
+          validation_score?: number | null
+          validation_status?: string | null
+          value_statement_seed?: string | null
+          what_you_help_them_do?: string | null
+          who_you_help?: string | null
+          years_experience?: number | null
         }
         Update: {
-          id?: string
-          user_id?: string
-          idea_source?: "practical_experience" | "learned_obsession" | "advice_sought" | "problem_solved" | null
-          idea_source_details?: string | null
-          years_experience?: number | null
-          target_market?: "health" | "wealth" | "relationships" | null
-          primary_outcome?: "make_money" | "save_money" | "save_time" | "health_fitness" | "attractiveness" | "peace_of_mind" | null
-          who_you_help?: string | null
-          what_you_help_them_do?: string | null
-          validation_enjoyment?: "yes" | "somewhat" | "no" | null
-          validation_learning?: "yes" | "somewhat" | "no" | null
-          validation_longevity?: "yes" | "probably" | "unsure" | "no" | null
+          created_at?: string | null
+          current_step?: number | null
           expansion_potential?: string | null
-          validation_score?: number | null
-          validation_status?: "strong" | "moderate" | "weak" | null
-          value_statement_seed?: string | null
-          current_step?: number
-          stage_1_completed?: boolean
+          id?: string
+          idea_source?: string | null
+          idea_source_details?: string | null
+          primary_outcome?: string | null
+          stage_1_completed?: boolean | null
           stage_1_completed_at?: string | null
-          created_at?: string
-          updated_at?: string
+          target_market?: string | null
+          updated_at?: string | null
+          user_id?: string
+          validation_enjoyment?: string | null
+          validation_learning?: string | null
+          validation_longevity?: string | null
+          validation_score?: number | null
+          validation_status?: string | null
+          value_statement_seed?: string | null
+          what_you_help_them_do?: string | null
+          who_you_help?: string | null
+          years_experience?: number | null
         }
         Relationships: []
       }
