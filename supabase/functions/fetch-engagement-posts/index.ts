@@ -326,6 +326,20 @@ serve(async (req) => {
       // Get profile image URL (Apify may return it as picture or profilePicture)
       const authorImageUrl = post.author?.picture || post.author?.profilePicture || null;
 
+      // Delete existing posts for this profile before inserting the new one
+      // This ensures only the latest post per profile is kept
+      const { error: deleteError } = await supabase
+        .from('engagement_posts')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('profile_id', profile.id);
+
+      if (deleteError) {
+        console.error(`Error deleting old posts for profile ${profile.id}: ${deleteError.message}`);
+      } else {
+        console.log(`Deleted old posts for profile ${profile.id}`);
+      }
+
       const engagementPost = {
         user_id: user.id,
         profile_id: profile.id,
@@ -345,16 +359,13 @@ serve(async (req) => {
         fetched_at: new Date().toISOString(),
       };
 
-      // Upsert the post (update if exists, insert if new)
-      const { error: upsertError } = await supabase
+      // Insert the new post
+      const { error: insertError } = await supabase
         .from('engagement_posts')
-        .upsert(engagementPost, {
-          onConflict: 'user_id,linkedin_post_url',
-          ignoreDuplicates: false,
-        });
+        .insert(engagementPost);
 
-      if (upsertError) {
-        console.error(`Error saving post: ${upsertError.message}`);
+      if (insertError) {
+        console.error(`Error saving post: ${insertError.message}`);
         skippedCount++;
       } else {
         savedCount++;
