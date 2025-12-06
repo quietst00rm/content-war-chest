@@ -12,6 +12,9 @@ const APIFY_ACTOR_ID = 'harvestapi~linkedin-profile-posts';
 const MAX_POLL_ATTEMPTS = 60; // 5 minutes (5 seconds * 60)
 const POLL_INTERVAL_MS = 5000; // 5 seconds
 
+// AI comment generation config
+const MIN_CONTENT_LENGTH_FOR_AI = 50;
+
 // Input validation schema
 const FetchEngagementPostsSchema = z.object({
   profile_ids: z.array(z.string().uuid()).optional(),
@@ -47,130 +50,61 @@ interface FollowedProfile {
   name: string | null;
 }
 
-// AI Comment Generation System Prompt
-const AI_SYSTEM_PROMPT = `You are a LinkedIn engagement strategist writing comments for an Amazon/e-commerce professional. Your comments must be indistinguishable from those written by a busy entrepreneur typing on their phone.
-
-CRITICAL RULES - VIOLATE ANY OF THESE AND THE COMMENT IS UNUSABLE:
-
-1. NEVER start with:
-   - "Great post"
-   - "Love this"
-   - "This is so true"
-   - "Couldn't agree more"
-   - "What a great point"
-   - Any compliment as the opening
-
-2. NEVER use these AI-sounding phrases:
-   - "Absolutely" / "Definitely" / "Certainly"
-   - "This resonates"
-   - "Well said"
-   - "Spot on"
-   - "This hit home"
-   - "Game-changer"
-   - "So important"
-   - "Key takeaway"
-
-3. ALWAYS do ONE of these instead:
-   - Jump straight into your own experience ("We tested this last Q4 and...")
-   - Add a specific angle they didn't mention ("The part people miss is...")
-   - Ask a genuine question that shows you read it ("Does this apply when...?")
-   - Politely challenge or add nuance ("I'd push back slightly on...")
-   - Share a concrete data point or result ("Saw a 23% lift when we...")
-
-4. LENGTH: 1-3 sentences MAX. Most should be 1-2.
-
-5. TONE:
-   - Casual but professional
-   - Use contractions (don't, won't, it's)
-   - Occasional sentence fragments are fine
-   - No emojis (or max 1 if very natural)
-   - Lowercase is fine for casual words
-   - Can end with a question
-
-6. STRUCTURE VARIETY across the 3 options:
-   - Option 1: Share a related personal experience or observation
-   - Option 2: Add value by extending their point with new information
-   - Option 3: Ask a thoughtful question or offer a slight counterpoint
-
-7. SPECIFICITY:
-   - Reference specific phrases or ideas from their post
-   - Use concrete numbers/examples when possible
-   - Avoid vague generalities
-
-OUTPUT FORMAT:
-Return exactly 3 comments as a JSON array:
-{
-  "comments": [
-    {"type": "experience", "text": "..."},
-    {"type": "value-add", "text": "..."},
-    {"type": "question", "text": "..."}
-  ]
-}`;
+interface AICommentResponse {
+  comments: Array<{
+    type: 'experience' | 'value-add' | 'question';
+    text: string;
+  }>;
+}
 
 // Helper: Generate AI comments for a post
 async function generateAIComments(
   postContent: string,
-  authorName: string,
-  authorTitle: string
+  lovableApiKey: string
 ): Promise<string | null> {
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-
-  if (!LOVABLE_API_KEY) {
-    console.log('LOVABLE_API_KEY not configured, skipping AI comment generation');
-    return null;
-  }
-
-  if (postContent.length < 50) {
-    console.log('Post too short for AI comments');
-    return null;
-  }
-
-  const userPrompt = `Generate 3 LinkedIn comments for this post:
-
-POST AUTHOR: ${authorName}
-${authorTitle ? `AUTHOR HEADLINE: ${authorTitle}` : ''}
-
-POST CONTENT:
-${postContent}
-
-Remember: Sound like a real person typing on their phone. No AI fluff.`;
+  const systemPrompt = `Generate 3 human-sounding LinkedIn comments that don't start with generic phrases like "Great post" or "Love this".
+The 3 comments should be different types: one sharing a personal experience, one adding value/new information, and one asking a thoughtful question.
+Keep comments 1-3 sentences, casual but professional, using contractions.
+Return as JSON with format: {"comments": [{"type": "experience", "text": "..."}, {"type": "value-add", "text": "..."}, {"type": "question", "text": "..."}]}`;
 
   try {
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: AI_SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Generate 3 LinkedIn comments for this post:\n\n${postContent}` }
         ],
-        temperature: 0.8,
+        response_format: { type: 'json_object' },
       }),
     });
 
     if (!response.ok) {
-      console.error('AI gateway error:', response.status);
+      console.error(`AI gateway error: ${response.status} ${await response.text()}`);
       return null;
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
-
-    // Extract JSON from response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error('Failed to extract JSON from AI response');
+    const content = data.choices?.[0]?.message?.content;
+    
+    if (!content) {
+      console.error('No content in AI response');
       return null;
     }
 
-    const result = JSON.parse(jsonMatch[0]);
-    result.generated_at = new Date().toISOString();
+    // Validate the JSON structure
+    const parsed: AICommentResponse = JSON.parse(content);
+    if (!parsed.comments || !Array.isArray(parsed.comments) || parsed.comments.length !== 3) {
+      console.error('Invalid AI response structure');
+      return null;
+    }
 
-    return JSON.stringify(result);
+    return content;
   } catch (error) {
     console.error('Error generating AI comments:', error);
     return null;
@@ -358,6 +292,7 @@ serve(async (req) => {
     const APIFY_API_KEY = Deno.env.get('APIFY_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!APIFY_API_KEY) {
       throw new Error('APIFY_API_KEY is not configured');
@@ -365,6 +300,10 @@ serve(async (req) => {
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error('Supabase configuration missing');
+    }
+
+    if (!LOVABLE_API_KEY) {
+      console.warn('LOVABLE_API_KEY not configured - AI comment generation will be skipped');
     }
 
     // Create authenticated Supabase client
@@ -404,7 +343,8 @@ serve(async (req) => {
           success: true,
           message: 'No active profiles to fetch',
           posts_fetched: 0,
-          posts_saved: 0
+          posts_saved: 0,
+          ai_comments_generated: 0
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -436,7 +376,7 @@ serve(async (req) => {
     // Process and save posts
     let savedCount = 0;
     let skippedCount = 0;
-    let aiGeneratedCount = 0;
+    let aiCommentsGenerated = 0;
 
     for (const post of posts) {
       // Find matching profile
@@ -454,18 +394,23 @@ serve(async (req) => {
         continue;
       }
 
-      // Generate AI comments for this post
-      const authorName = post.author?.name || profile.name || 'Unknown';
-      const authorTitle = post.author?.info || '';
-      console.log(`Generating AI comments for post by ${authorName}...`);
-      const aiComment = await generateAIComments(post.content, authorName, authorTitle);
-
-      if (aiComment) {
-        aiGeneratedCount++;
-      }
-
       // Get profile image URL (Apify may return it as picture or profilePicture)
       const authorImageUrl = post.author?.picture || post.author?.profilePicture || null;
+
+      // Generate AI comments if content is long enough and API key is available
+      let aiComment: string | null = null;
+      if (LOVABLE_API_KEY && post.content.length >= MIN_CONTENT_LENGTH_FOR_AI) {
+        console.log(`Generating AI comments for post from ${profile.name || profile.linkedin_url}...`);
+        aiComment = await generateAIComments(post.content, LOVABLE_API_KEY);
+        if (aiComment) {
+          aiCommentsGenerated++;
+          console.log(`AI comments generated successfully`);
+        } else {
+          console.log(`AI comment generation failed, saving post without comments`);
+        }
+      } else if (post.content.length < MIN_CONTENT_LENGTH_FOR_AI) {
+        console.log(`Skipping AI generation - content too short (${post.content.length} chars)`);
+      }
 
       // Delete existing posts for this profile before inserting the new one
       // This ensures only the latest post per profile is kept
@@ -486,9 +431,9 @@ serve(async (req) => {
         profile_id: profile.id,
         linkedin_post_url: post.linkedinUrl,
         linkedin_post_id: post.id || null,
-        author_name: authorName,
+        author_name: post.author?.name || profile.name || null,
         author_profile_url: post.author?.linkedinUrl || null,
-        author_title: authorTitle || null,
+        author_title: post.author?.info || null,
         author_profile_image_url: authorImageUrl,
         content: post.content,
         posted_at: post.postedAt?.date || null,
@@ -497,8 +442,9 @@ serve(async (req) => {
         likes: post.engagement?.likes || 0,
         comments: post.engagement?.comments || 0,
         shares: post.engagement?.shares || 0,
-        ai_comment: aiComment,
         fetched_at: new Date().toISOString(),
+        ai_comment: aiComment,
+        ai_comment_generated_at: aiComment ? new Date().toISOString() : null,
       };
 
       // Insert the new post
@@ -547,7 +493,7 @@ serve(async (req) => {
       .update({ last_fetched_at: new Date().toISOString() })
       .in('id', profileIds);
 
-    console.log(`Successfully saved ${savedCount} posts (${aiGeneratedCount} with AI comments), skipped ${skippedCount}`);
+    console.log(`Successfully saved ${savedCount} posts, skipped ${skippedCount}, AI comments generated: ${aiCommentsGenerated}`);
 
     return new Response(
       JSON.stringify({
@@ -555,8 +501,8 @@ serve(async (req) => {
         posts_fetched: posts.length,
         posts_saved: savedCount,
         posts_skipped: skippedCount,
-        ai_comments_generated: aiGeneratedCount,
         profiles_processed: profiles.length,
+        ai_comments_generated: aiCommentsGenerated,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
