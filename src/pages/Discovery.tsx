@@ -132,7 +132,7 @@ export default function Discovery() {
               <Home className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-lg font-bold text-foreground tracking-tight">
+          <h1 className="text-lg font-extrabold tracking-tight text-foreground">
             Discovery Wizard
           </h1>
         </div>
