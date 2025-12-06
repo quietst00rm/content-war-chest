@@ -41,7 +41,7 @@ export const FilterSidebar = ({
     <div className="p-4">
       {/* Usage Status Filter */}
       <div className="mb-6">
-        <h4 className="text-xs font-medium mb-2 text-muted-foreground uppercase tracking-wider">Status</h4>
+        <h4 className="text-xs font-semibold mb-3 text-foreground/70 uppercase tracking-wider">Status</h4>
         <div className="space-y-0.5">
           <button
             className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
@@ -86,8 +86,8 @@ export const FilterSidebar = ({
       </div>
 
       {/* Folders */}
-      <div className="mb-6">
-        <h4 className="text-xs font-medium mb-2 text-muted-foreground uppercase tracking-wider">Folders</h4>
+      <div className="mb-6 pt-4 border-t border-border">
+        <h4 className="text-xs font-semibold mb-3 text-foreground/70 uppercase tracking-wider">Folders</h4>
         <FolderList
           folders={folders}
           posts={posts}
@@ -97,8 +97,8 @@ export const FilterSidebar = ({
       </div>
 
       {/* Categories */}
-      <div>
-        <h4 className="text-xs font-medium mb-2 text-muted-foreground uppercase tracking-wider">Categories</h4>
+      <div className="pt-4 border-t border-border">
+        <h4 className="text-xs font-semibold mb-3 text-foreground/70 uppercase tracking-wider">Categories</h4>
         <div className="space-y-0.5">
           {categories.map((category) => {
             const isSelected = selectedCategory === category;

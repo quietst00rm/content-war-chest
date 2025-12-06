@@ -52,7 +52,7 @@ export const PostCard = ({
 
   return (
     <Card
-      className="h-[220px] p-4 cursor-pointer transition-colors duration-150 relative border-border hover:border-muted-foreground/50 bg-card/80 flex flex-col"
+      className="h-[220px] p-4 cursor-pointer transition-all duration-200 relative border-border hover:border-primary/40 bg-card flex flex-col hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_4px_24px_rgba(37,99,235,0.15)]"
       onClick={handleCardClick}
     >
       {/* Selection Checkbox */}
@@ -100,11 +100,11 @@ export const PostCard = ({
 
       {/* Tags Row */}
       {visibleTags.length > 0 && (
-        <div className="flex flex-wrap gap-1 overflow-hidden max-h-6 mb-2">
+        <div className="flex flex-wrap gap-1.5 overflow-hidden max-h-6 mb-2">
           {visibleTags.map((tag) => (
             <span
               key={tag}
-              className="text-xs uppercase text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded"
+              className="text-xs uppercase text-secondary-foreground/80 bg-secondary px-2 py-0.5 rounded border border-border/50"
             >
               {tag}
             </span>
@@ -113,8 +113,8 @@ export const PostCard = ({
       )}
 
       {/* Footer: Character count + Copy button - pinned to bottom */}
-      <div className="flex items-center justify-between mt-auto pt-2">
-        <span className="text-xs text-muted-foreground/70">
+      <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
+        <span className="text-xs text-muted-foreground">
           {post.character_count || 0} chars
         </span>
         {!selectionMode && (
