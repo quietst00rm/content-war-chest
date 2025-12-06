@@ -86,7 +86,7 @@ export default function Auth() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 bg-clip-text text-transparent">Content War Chest</CardTitle>
+          <CardTitle className="text-2xl font-extrabold tracking-tight gradient-primary-text">Own The Noise</CardTitle>
           <CardDescription>Sign in to manage your content</CardDescription>
         </CardHeader>
         <CardContent>

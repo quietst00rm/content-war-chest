@@ -71,18 +71,18 @@ function getOutcomeDescription(outcome: PrimaryOutcome | null): string {
 
 function getStatusColor(status: ValidationStatus | null): string {
   const colors: Record<ValidationStatus, string> = {
-    strong: "text-green-600 dark:text-green-400",
-    moderate: "text-amber-600 dark:text-amber-400",
-    weak: "text-red-600 dark:text-red-400",
+    strong: "text-success",
+    moderate: "text-primary",
+    weak: "text-destructive",
   };
   return status ? colors[status] : "";
 }
 
 function getStatusBgColor(status: ValidationStatus | null): string {
   const colors: Record<ValidationStatus, string> = {
-    strong: "bg-green-100 dark:bg-green-900/30",
-    moderate: "bg-amber-100 dark:bg-amber-900/30",
-    weak: "bg-red-100 dark:bg-red-900/30",
+    strong: "bg-success/10",
+    moderate: "bg-primary/10",
+    weak: "bg-destructive/10",
   };
   return status ? colors[status] : "";
 }
@@ -263,9 +263,9 @@ export function Step5Summary({ strategy, calculateValidationScore }: Step5Summar
                 value={(score / 9) * 100}
                 className={cn(
                   "h-3",
-                  status === "strong" && "[&>div]:bg-green-500",
-                  status === "moderate" && "[&>div]:bg-amber-500",
-                  status === "weak" && "[&>div]:bg-red-500"
+                  status === "strong" && "[&>div]:bg-success",
+                  status === "moderate" && "[&>div]:bg-primary",
+                  status === "weak" && "[&>div]:bg-destructive"
                 )}
               />
             </div>
@@ -276,9 +276,9 @@ export function Step5Summary({ strategy, calculateValidationScore }: Step5Summar
             "inline-flex items-center gap-2 px-3 py-2 rounded-lg",
             getStatusBgColor(status)
           )}>
-            {status === "strong" && <Check className="h-4 w-4 text-green-600 dark:text-green-400" />}
-            {status === "moderate" && <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
-            {status === "weak" && <X className="h-4 w-4 text-red-600 dark:text-red-400" />}
+            {status === "strong" && <Check className="h-4 w-4 text-success" />}
+            {status === "moderate" && <AlertTriangle className="h-4 w-4 text-primary" />}
+            {status === "weak" && <X className="h-4 w-4 text-destructive" />}
             <span className={cn("font-medium", getStatusColor(status))}>
               {getStatusLabel(status)}
             </span>
@@ -294,11 +294,11 @@ export function Step5Summary({ strategy, calculateValidationScore }: Step5Summar
               <div key={index} className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2">
                   {item.isPositive ? (
-                    <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <Check className="h-4 w-4 text-success" />
                   ) : item.isNeutral ? (
-                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <AlertTriangle className="h-4 w-4 text-primary" />
                   ) : (
-                    <X className="h-4 w-4 text-red-600 dark:text-red-400" />
+                    <X className="h-4 w-4 text-destructive" />
                   )}
                   {item.question}
                 </span>

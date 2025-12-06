@@ -132,19 +132,19 @@ export default function Discovery() {
               <Home className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-lg font-bold bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 bg-clip-text text-transparent">
+          <h1 className="text-lg font-bold gradient-primary-text">
             Discovery Wizard
           </h1>
         </div>
         <div className="flex items-center gap-2">
           {/* Save Status Indicator */}
-          <div className={cn(
+        <div className={cn(
             "flex items-center gap-1.5 text-xs px-2 py-1 rounded transition-all",
             saveStatus === "saving" && "text-muted-foreground",
-            saveStatus === "saved" && "text-green-600 dark:text-green-400",
-            saveStatus === "error" && "text-red-600 dark:text-red-400"
+            saveStatus === "saved" && "text-success",
+            saveStatus === "error" && "text-destructive"
           )}>
-            {saveStatus === "saving" && (
+          {saveStatus === "saving" && (
               <>
                 <Loader2 className="h-3 w-3 animate-spin" />
                 <span>Saving...</span>
@@ -152,7 +152,7 @@ export default function Discovery() {
             )}
             {saveStatus === "saved" && (
               <>
-                <Check className="h-3 w-3" />
+                <Check className="h-3 w-3 text-success" />
                 <span>Saved</span>
               </>
             )}

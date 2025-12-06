@@ -2,14 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* OwnTheNoise Design System - "Signal in the Static"
+   All colors MUST be HSL.
+   Dark-first aesthetic with neon accents representing signal/clarity.
 */
 
 @layer base {
   :root {
-    /* Light Theme - #f8fafc background */
-    --background: 210 40% 98%;
+    /* Light Theme - for optional light mode */
+    --background: 210 20% 98%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -18,75 +19,81 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 24 95% 53%;
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
 
     --muted: 210 40% 96%;
-    --muted-foreground: 215 20% 36%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 24 95% 53%;
+    --accent: 221 83% 53%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 330 81% 60%;
     --destructive-foreground: 0 0% 100%;
+
+    --success: 82 78% 55%;
+    --success-foreground: 82 78% 15%;
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 24 95% 53%;
+    --ring: 221 83% 53%;
 
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 24 95% 53%;
+    --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 40% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 24 95% 53%;
+    --sidebar-ring: 221 83% 53%;
   }
 
   .dark {
-    /* Dark Theme - #0a0a0f background */
-    --background: 240 33% 3%;
-    --foreground: 0 0% 98%;
+    /* Dark Theme - Primary (Deep Navy → Dark Slate) */
+    --background: 229 84% 5%;
+    --foreground: 210 20% 98%;
 
-    --card: 240 6% 10%;
-    --card-foreground: 0 0% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 20% 98%;
 
-    --popover: 240 6% 10%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 20% 98%;
 
-    --primary: 24 95% 53%;
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 222 30% 18%;
+    --secondary-foreground: 210 20% 98%;
 
-    --muted: 240 4% 16%;
-    --muted-foreground: 0 0% 63%;
+    --muted: 222 30% 18%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 24 95% 53%;
+    --accent: 221 83% 53%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 330 81% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
-    --ring: 24 95% 53%;
+    --success: 82 78% 55%;
+    --success-foreground: 82 78% 15%;
+
+    --border: 222 30% 18%;
+    --input: 222 30% 18%;
+    --ring: 221 83% 53%;
     
-    --sidebar-background: 240 6% 10%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 24 95% 53%;
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 4% 16%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 4% 16%;
-    --sidebar-ring: 24 95% 53%;
+    --sidebar-accent: 222 30% 18%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 222 30% 18%;
+    --sidebar-ring: 221 83% 53%;
   }
 }
 
@@ -97,5 +104,36 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* OwnTheNoise Custom Utilities */
+@layer utilities {
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(82, 78%, 55%));
+  }
+  
+  .gradient-primary-text {
+    background: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(82, 78%, 55%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-noise-fade {
+    background: linear-gradient(180deg, hsl(229, 84%, 5%), hsl(222, 47%, 11%), transparent);
+  }
+
+  .gradient-pulse {
+    background: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(330, 81%, 60%));
+  }
+
+  .glow-primary {
+    box-shadow: 0 0 40px hsl(221 83% 53% / 0.3);
+  }
+
+  .glow-success {
+    box-shadow: 0 0 40px hsl(82 78% 55% / 0.3);
   }
 }
