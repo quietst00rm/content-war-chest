@@ -296,20 +296,20 @@ const Index = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Minimal Header */}
       <header className="h-14 border-b border-border flex items-center justify-between px-4 shrink-0">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 bg-clip-text text-transparent">
-          Content War Chest
+        <h1 className="text-xl font-bold gradient-primary-text">
+          Own The Noise
         </h1>
         <div className="flex items-center gap-2">
           <Link to="/discovery">
             <Button variant="ghost" size="sm" className="h-9 gap-1.5 relative" aria-label="Discovery Wizard">
               {isStage1Completed ? (
-                <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <Check className="h-4 w-4 text-success" />
               ) : (
                 <Compass className="h-4 w-4" />
               )}
               <span className="hidden sm:inline">Discovery</span>
               {!isStage1Completed && (
-                <Badge variant="secondary" className="ml-1 hidden sm:inline-flex text-[10px] px-1.5 py-0 h-4 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                <Badge variant="secondary" className="ml-1 hidden sm:inline-flex text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary">
                   Start Here
                 </Badge>
               )}

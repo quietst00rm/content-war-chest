@@ -142,7 +142,7 @@ export const PostModal = ({
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg font-semibold">Edit Post</DialogTitle>
             {post.is_used && (
-              <Badge variant="secondary" className="bg-orange-500/20 text-orange-600 dark:text-orange-400">
+              <Badge variant="secondary" className="bg-success/20 text-success">
                 Used
               </Badge>
             )}

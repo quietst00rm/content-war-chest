@@ -82,7 +82,7 @@ export const PostCard = ({
           {categoryEmoji} {post.primary_category}
         </Badge>
         {post.is_used && (
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-600 dark:text-orange-400">
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-success/20 text-success">
             Used
           </span>
         )}
