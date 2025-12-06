@@ -16,85 +16,85 @@ export type Database = {
     Tables: {
       engagement_posts: {
         Row: {
-          id: string
-          user_id: string
-          profile_id: string
-          linkedin_post_url: string
-          linkedin_post_id: string | null
-          author_name: string | null
-          author_profile_url: string | null
-          author_title: string | null
-          author_profile_image_url: string | null
-          content: string
-          posted_at: string | null
-          posted_ago_text: string | null
-          days_ago: number
-          likes: number
-          comments: number
-          shares: number
           ai_comment: string | null
           ai_comment_generated_at: string | null
-          user_comment: string | null
-          is_commented: boolean
+          author_name: string | null
+          author_profile_image_url: string | null
+          author_profile_url: string | null
+          author_title: string | null
           commented_at: string | null
-          is_hidden: boolean
-          fetched_at: string
+          comments: number
+          content: string
           created_at: string
+          days_ago: number
+          fetched_at: string
+          id: string
+          is_commented: boolean
+          is_hidden: boolean
+          likes: number
+          linkedin_post_id: string | null
+          linkedin_post_url: string
+          posted_ago_text: string | null
+          posted_at: string | null
+          profile_id: string
+          shares: number
           updated_at: string
+          user_comment: string | null
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          profile_id: string
-          linkedin_post_url: string
-          linkedin_post_id?: string | null
-          author_name?: string | null
-          author_profile_url?: string | null
-          author_title?: string | null
-          author_profile_image_url?: string | null
-          content: string
-          posted_at?: string | null
-          posted_ago_text?: string | null
-          days_ago?: number
-          likes?: number
-          comments?: number
-          shares?: number
           ai_comment?: string | null
           ai_comment_generated_at?: string | null
-          user_comment?: string | null
-          is_commented?: boolean
+          author_name?: string | null
+          author_profile_image_url?: string | null
+          author_profile_url?: string | null
+          author_title?: string | null
           commented_at?: string | null
-          is_hidden?: boolean
-          fetched_at?: string
+          comments?: number
+          content: string
           created_at?: string
+          days_ago?: number
+          fetched_at?: string
+          id?: string
+          is_commented?: boolean
+          is_hidden?: boolean
+          likes?: number
+          linkedin_post_id?: string | null
+          linkedin_post_url: string
+          posted_ago_text?: string | null
+          posted_at?: string | null
+          profile_id: string
+          shares?: number
           updated_at?: string
+          user_comment?: string | null
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          profile_id?: string
-          linkedin_post_url?: string
-          linkedin_post_id?: string | null
-          author_name?: string | null
-          author_profile_url?: string | null
-          author_title?: string | null
-          author_profile_image_url?: string | null
-          content?: string
-          posted_at?: string | null
-          posted_ago_text?: string | null
-          days_ago?: number
-          likes?: number
-          comments?: number
-          shares?: number
           ai_comment?: string | null
           ai_comment_generated_at?: string | null
-          user_comment?: string | null
-          is_commented?: boolean
+          author_name?: string | null
+          author_profile_image_url?: string | null
+          author_profile_url?: string | null
+          author_title?: string | null
           commented_at?: string | null
-          is_hidden?: boolean
-          fetched_at?: string
+          comments?: number
+          content?: string
           created_at?: string
+          days_ago?: number
+          fetched_at?: string
+          id?: string
+          is_commented?: boolean
+          is_hidden?: boolean
+          likes?: number
+          linkedin_post_id?: string | null
+          linkedin_post_url?: string
+          posted_ago_text?: string | null
+          posted_at?: string | null
+          profile_id?: string
+          shares?: number
           updated_at?: string
+          user_comment?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -103,50 +103,8 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "followed_profiles"
             referencedColumns: ["id"]
-          }
+          },
         ]
-      }
-      followed_profiles: {
-        Row: {
-          id: string
-          user_id: string
-          linkedin_url: string
-          name: string | null
-          title: string | null
-          profile_image_url: string | null
-          notes: string | null
-          is_active: boolean
-          last_fetched_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          linkedin_url: string
-          name?: string | null
-          title?: string | null
-          profile_image_url?: string | null
-          notes?: string | null
-          is_active?: boolean
-          last_fetched_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          linkedin_url?: string
-          name?: string | null
-          title?: string | null
-          profile_image_url?: string | null
-          notes?: string | null
-          is_active?: boolean
-          last_fetched_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
       }
       folders: {
         Row: {
@@ -175,161 +133,47 @@ export type Database = {
         }
         Relationships: []
       }
-      hook_variants: {
+      followed_profiles: {
         Row: {
-          id: string
-          post_id: string
-          user_id: string
-          hook_text: string
-          is_primary: boolean
-          source: string
-          times_used: number
-          avg_performance_score: number | null
           created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          post_id: string
-          user_id: string
-          hook_text: string
-          is_primary?: boolean
-          source: string
-          times_used?: number
-          avg_performance_score?: number | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          post_id?: string
-          user_id?: string
-          hook_text?: string
-          is_primary?: boolean
-          source?: string
-          times_used?: number
-          avg_performance_score?: number | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hook_variants_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      performance_logs: {
-        Row: {
           id: string
-          post_id: string
-          user_id: string
-          platform: string
-          logged_at: string
-          posted_at: string | null
-          impressions: number | null
-          likes: number | null
-          comments: number | null
-          shares: number | null
-          clicks: number | null
-          engagement_rate: number | null
+          is_active: boolean
+          last_fetched_at: string | null
+          linkedin_url: string
+          name: string | null
           notes: string | null
-          created_at: string
+          profile_image_url: string | null
+          title: string | null
           updated_at: string
+          user_id: string
         }
         Insert: {
-          id?: string
-          post_id: string
-          user_id: string
-          platform: string
-          logged_at?: string
-          posted_at?: string | null
-          impressions?: number | null
-          likes?: number | null
-          comments?: number | null
-          shares?: number | null
-          clicks?: number | null
-          engagement_rate?: number | null
-          notes?: string | null
           created_at?: string
+          id?: string
+          is_active?: boolean
+          last_fetched_at?: string | null
+          linkedin_url: string
+          name?: string | null
+          notes?: string | null
+          profile_image_url?: string | null
+          title?: string | null
           updated_at?: string
+          user_id: string
         }
         Update: {
+          created_at?: string
           id?: string
-          post_id?: string
-          user_id?: string
-          platform?: string
-          logged_at?: string
-          posted_at?: string | null
-          impressions?: number | null
-          likes?: number | null
-          comments?: number | null
-          shares?: number | null
-          clicks?: number | null
-          engagement_rate?: number | null
+          is_active?: boolean
+          last_fetched_at?: string | null
+          linkedin_url?: string
+          name?: string | null
           notes?: string | null
-          created_at?: string
+          profile_image_url?: string | null
+          title?: string | null
           updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "performance_logs_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      platform_versions: {
-        Row: {
-          id: string
-          post_id: string
-          user_id: string
-          platform: string
-          content: string
-          formatted_content: string | null
-          character_count: number | null
-          is_primary: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          post_id: string
-          user_id: string
-          platform: string
-          content: string
-          formatted_content?: string | null
-          character_count?: number | null
-          is_primary?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          post_id?: string
           user_id?: string
-          platform?: string
-          content?: string
-          formatted_content?: string | null
-          character_count?: number | null
-          is_primary?: boolean
-          created_at?: string
-          updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "platform_versions_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
       posts: {
         Row: {
@@ -343,10 +187,7 @@ export type Database = {
           is_used: boolean | null
           notes: string | null
           primary_category: string
-          scheduled_for: string | null
-          scheduled_platform: string | null
           source_section: string | null
-          status: string
           subcategory: string | null
           summary: string | null
           tags: string[] | null
@@ -368,10 +209,7 @@ export type Database = {
           is_used?: boolean | null
           notes?: string | null
           primary_category: string
-          scheduled_for?: string | null
-          scheduled_platform?: string | null
           source_section?: string | null
-          status?: string
           subcategory?: string | null
           summary?: string | null
           tags?: string[] | null
@@ -393,10 +231,7 @@ export type Database = {
           is_used?: boolean | null
           notes?: string | null
           primary_category?: string
-          scheduled_for?: string | null
-          scheduled_platform?: string | null
           source_section?: string | null
-          status?: string
           subcategory?: string | null
           summary?: string | null
           tags?: string[] | null
