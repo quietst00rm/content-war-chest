@@ -50,11 +50,11 @@ interface FollowedProfile {
   name: string | null;
 }
 
-// New AI comment response structure (single comment)
+// New AI comment response structure (single comment) - updated approach types
 interface AICommentResponse {
   comment: string;
-  approach: 'micro' | 'reaction' | 'opinion' | 'question' | 'support' | 'disagree';
-  tone_matched: 'casual' | 'professional' | 'playful' | 'empathetic';
+  approach: 'reaction' | 'agreement_with_addition' | 'personal_take' | 'supportive';
+  tone_matched: string;
   char_count: number;
   reasoning: string;
   generated_at: string;
@@ -67,54 +67,69 @@ interface AICommentResponse {
 // ============================================================================
 
 const BANNED_PHRASES = [
-  "this resonates", "this really resonates", "game-changer", "game changer",
-  "couldn't agree more", "i'd also highlight", "building on your point",
-  "that's fantastic", "what you're touching on is", "to add to this",
-  "i've definitely experienced", "in my experience", "as a ",
-  "i'm curious if", "it's wild how far", "great breakdown", "powerful insights",
-  "this is gold", "spot on as always", "great post", "love this post",
-  "what a great point", "so true", "this hit home", "so important",
-  "key takeaway", "absolutely agree", "definitely agree", "certainly agree",
-  "well articulated", "brilliantly put", "beautifully written",
-  "this is so insightful", "what a wonderful", "we tested this", "we tried this",
-  "in my role as", "speaking as a", "i can say that",
+  // Explicitly banned in task
+  "this really resonates", "this resonates", "game-changer", "game changer",
+  "i've definitely", "couldn't agree more", "great breakdown", "that's fantastic",
+  "building on your point", "i'd also highlight", "what you're touching on is often called",
+  "what you're touching on is", "it's wild how far", "i'm curious if", "as a ",
+  // Additional corporate/robotic phrases
+  "to add to this", "in my experience", "powerful insights", "this is gold",
+  "spot on as always", "great post", "love this post", "what a great point",
+  "so true", "this hit home", "so important", "key takeaway", "absolutely agree",
+  "definitely agree", "certainly agree", "well articulated", "brilliantly put",
+  "beautifully written", "this is so insightful", "what a wonderful",
+  "we tested this", "we tried this", "in my role as", "speaking as a",
+  "i can say that", "incredibly insightful", "super helpful",
+  "really appreciate you sharing", "thanks for sharing this", "valuable perspective",
 ];
 
 // ============================================================================
 // SYSTEM PROMPT FOR INLINE GENERATION
 // ============================================================================
 
-const SYSTEM_PROMPT = `You are generating a single LinkedIn comment that sounds authentically human.
+const SYSTEM_PROMPT = `You are generating a single LinkedIn comment that sounds like a real human wrote it.
 
-## ANALYZE THE POST FIRST
-Classify the post type (observation, vulnerable-story, educational, promotional, thank-you, question, celebration) and energy (casual, professional, vulnerable, punchy, playful, serious).
+## STEP 1: ANALYZE THE POST
+Classify the post type (observation, vulnerable-story, educational, promotional, thank-you, question, celebration) and tone (casual, professional, vulnerable, punchy, playful, formal).
 
-## LENGTH DISTRIBUTION (CRITICAL)
-- 50% MICRO (under 50 chars): "Exactly.", "This is it.", "Ha, same.", "Nailed it."
-- 30% SHORT (50-100 chars): One sentence reactions
-- 15% MEDIUM (100-200 chars): 1-2 sentences
-- 5% LONG (200+ chars): Only for educational deep-dives
+## STEP 2: SELECT APPROACH (pick ONE)
+- "reaction" - Simple response to the content
+- "agreement_with_addition" - Building on their point with a brief addition
+- "personal_take" - Sharing an opinion (WITHOUT fabricating experience)
+- "supportive" - For thank-yous, celebrations. Brief encouragement
 
-## APPROACH (pick ONE)
-- "micro": 1-10 words
-- "reaction": 1-2 sentences acknowledging content
-- "opinion": Brief personal take WITHOUT fabricating experience
-- "question": Short question under 10 words
-- "support": Brief congratulations
-- "disagree": Polite pushback
+## STEP 3: MATCH THE TONE
+Match the post's energy. Casual gets casual, professional gets clean, vulnerable gets empathetic.
 
-## HARD RULES
-NEVER USE: "This resonates", "Game-changer", "Couldn't agree more", "Great post", "I'd also highlight", "As a [role]", "I'm curious if", "In my experience" (when fabricating)
+## HARD RULES - VIOLATE ANY AND REJECTED:
 
-NEVER: Claim experiences you didn't have, use "we" for business activities, invent timelines, claim metrics/results
+### BANNED PUNCTUATION:
+- NEVER use exclamation points (!) under any circumstances
+- NEVER use question marks (?) - no questions allowed
+- Use periods only
 
-USE THESE: "Exactly.", "Spot on.", "This is it.", "Ha, same.", "Nailed it.", "100%", "Love it.", "Truth.", "[Name] - yep."
+### BANNED PHRASES:
+"This resonates", "Game-changer", "I've definitely", "Couldn't agree more", "Great breakdown", "That's fantastic", "Building on your point", "I'd also highlight", "As a [role]", "I'm curious if", "In my experience" (when fabricating), "Super helpful", "Thanks for sharing"
+
+### AUTHENTICITY:
+NEVER claim experiences, NEVER use "we" for business, NEVER invent timelines, NEVER claim metrics
+
+### LENGTH:
+DEFAULT to SHORT (1-3 sentences). Simple posts get simple replies. Sometimes "Ha, same" or "Solid take" is perfect.
+
+## EXAMPLES:
+- "Solid take."
+- "This is good."
+- "Ha, same."
+- "Yeah, this tracks."
+- "Yep. The part about X is what most people miss."
+- "Congrats. Well earned."
 
 ## OUTPUT (JSON only)
 {
-  "comment": "The comment text",
-  "approach": "micro|reaction|opinion|question|support|disagree",
-  "tone_matched": "casual|professional|playful|empathetic",
+  "comment": "The comment text - NO exclamation points, NO questions",
+  "approach": "reaction|agreement_with_addition|personal_take|supportive",
+  "tone_matched": "casual|professional|empathetic|playful",
   "char_count": 45,
   "reasoning": "Brief note"
 }`;
@@ -140,8 +155,29 @@ function hasFabricatedExperience(comment: string): boolean {
   return patterns.some(p => p.test(comment));
 }
 
+function hasQuestionMark(comment: string): boolean {
+  return comment.includes('?');
+}
+
+function hasExclamationPoint(comment: string): boolean {
+  return comment.includes('!');
+}
+
+function cleanComment(comment: string): string {
+  // Remove exclamation points and replace with periods
+  let cleaned = comment.replace(/!/g, '.');
+  // Remove question marks
+  cleaned = cleaned.replace(/\?/g, '.');
+  // Clean up double periods
+  cleaned = cleaned.replace(/\.+/g, '.').trim();
+  return cleaned;
+}
+
 function validateComment(comment: string): boolean {
-  return !containsBannedPhrase(comment) && !hasFabricatedExperience(comment);
+  return !containsBannedPhrase(comment) &&
+         !hasFabricatedExperience(comment) &&
+         !hasQuestionMark(comment) &&
+         !hasExclamationPoint(comment);
 }
 
 // ============================================================================
@@ -162,7 +198,12 @@ POST AUTHOR: ${authorName}${authorTitle ? `\nAUTHOR HEADLINE: ${authorTitle}` : 
 POST CONTENT:
 ${postContent}
 
-REMEMBER: 50% should be micro (under 50 chars like "Exactly." or "This is it."), 30% short, 15% medium, 5% long. Be brief.`;
+CRITICAL REMINDERS:
+1. NO exclamation points (!) - use periods only
+2. NO questions (?) - statements and observations only
+3. Keep it SHORT (1-3 sentences) unless the post genuinely warrants more
+4. Match the tone of the original post
+5. Do not fabricate experiences or claim to have done things`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -202,8 +243,11 @@ REMEMBER: 50% should be micro (under 50 chars like "Exactly." or "This is it."),
       return null;
     }
 
-    // Validate the comment
-    if (!validateComment(parsed.comment)) {
+    // Clean the comment to remove any ! or ?
+    let finalComment = cleanComment(parsed.comment);
+
+    // Validate the cleaned comment
+    if (!validateComment(finalComment)) {
       console.warn('Comment failed validation, attempting regeneration...');
 
       // Try once more with stricter prompt
@@ -217,7 +261,7 @@ REMEMBER: 50% should be micro (under 50 chars like "Exactly." or "This is it."),
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: userPrompt + '\n\nIMPORTANT: Previous attempt failed. Generate a VERY SHORT comment (under 50 chars). Use phrases like "Exactly.", "This is it.", "Nailed it.", "Love this.", or "Spot on."' }
+            { role: 'user', content: userPrompt + '\n\nIMPORTANT: Previous attempt failed. Generate a SHORT comment. Use simple phrases like "Solid take.", "This is good.", "Yeah, this tracks.", or "Congrats.". NO exclamation points. NO questions.' }
           ],
           temperature: 0.7,
           response_format: { type: 'json_object' },
@@ -229,22 +273,35 @@ REMEMBER: 50% should be micro (under 50 chars like "Exactly." or "This is it."),
         const retryContent = retryData.choices?.[0]?.message?.content;
         if (retryContent) {
           const retryParsed = JSON.parse(retryContent);
-          if (retryParsed.comment && validateComment(retryParsed.comment)) {
+          if (retryParsed.comment) {
+            const retryCleanedComment = cleanComment(retryParsed.comment);
+            if (validateComment(retryCleanedComment)) {
+              return {
+                comment: retryCleanedComment,
+                approach: retryParsed.approach || 'reaction',
+                tone: retryParsed.tone_matched || 'casual',
+              };
+            }
+            // Even if validation fails, return cleaned comment
             return {
-              comment: retryParsed.comment,
-              approach: retryParsed.approach || 'micro',
+              comment: retryCleanedComment,
+              approach: retryParsed.approach || 'reaction',
               tone: retryParsed.tone_matched || 'casual',
             };
           }
         }
       }
 
-      // If retry also fails, return null
-      return null;
+      // Return the cleaned comment even if some validation failed
+      return {
+        comment: finalComment,
+        approach: parsed.approach || 'reaction',
+        tone: parsed.tone_matched || 'casual',
+      };
     }
 
     return {
-      comment: parsed.comment,
+      comment: finalComment,
       approach: parsed.approach || 'reaction',
       tone: parsed.tone_matched || 'casual',
     };
@@ -528,11 +585,11 @@ serve(async (req) => {
     let skippedCount = 0;
     let aiCommentsGenerated = 0;
 
-    // Track statistics for reporting
+    // Track statistics for reporting (using new approach types)
     const stats = {
       totalCharCount: 0,
       commentCount: 0,
-      approachCounts: { micro: 0, reaction: 0, opinion: 0, question: 0, support: 0, disagree: 0 },
+      approachCounts: { reaction: 0, agreement_with_addition: 0, personal_take: 0, supportive: 0 },
     };
 
     for (const post of posts) {
@@ -556,6 +613,8 @@ serve(async (req) => {
 
       // Generate AI comment if content is long enough and API key is available
       let aiComment: string | null = null;
+      let aiApproach: string | null = null;
+      let aiTone: string | null = null;
 
       if (LOVABLE_API_KEY && post.content.length >= MIN_CONTENT_LENGTH_FOR_AI) {
         console.log(`Generating AI comment for post from ${profile.name || profile.linkedin_url}...`);
@@ -569,6 +628,8 @@ serve(async (req) => {
 
         if (result) {
           aiComment = result.comment;
+          aiApproach = result.approach;
+          aiTone = result.tone;
           aiCommentsGenerated++;
 
           // Update statistics
@@ -617,6 +678,8 @@ serve(async (req) => {
         shares: post.engagement?.shares || 0,
         fetched_at: new Date().toISOString(),
         ai_comment: aiComment,
+        ai_comment_approach: aiApproach,
+        ai_comment_tone: aiTone,
         ai_comment_generated_at: aiComment ? new Date().toISOString() : null,
       };
 

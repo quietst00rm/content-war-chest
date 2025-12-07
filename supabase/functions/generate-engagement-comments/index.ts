@@ -12,51 +12,52 @@ const corsHeaders = {
 
 // Post analysis types
 type PostType = 'observation' | 'vulnerable-story' | 'educational' | 'promotional' | 'thank-you' | 'question' | 'celebration';
-type PostEnergy = 'casual' | 'professional' | 'vulnerable' | 'punchy' | 'playful' | 'serious';
-type PostLength = 'short' | 'medium' | 'long';
-type CommenterRelationship = 'stranger' | 'acquaintance' | 'peer' | 'fan';
+type PostTone = 'casual' | 'professional' | 'vulnerable' | 'punchy' | 'playful' | 'formal';
+type ResponseLength = 'short' | 'medium' | 'detailed';
 
-// Comment approach types
-type CommentApproach = 'micro' | 'reaction' | 'opinion' | 'question' | 'support' | 'disagree';
-type CommentTone = 'casual' | 'professional' | 'playful' | 'empathetic';
+// NEW comment approach types (task requirement)
+type CommentApproach = 'reaction' | 'agreement_with_addition' | 'personal_take' | 'supportive';
 
 interface PostAnalysis {
   postType: PostType;
-  postEnergy: PostEnergy;
-  postLength: PostLength;
-  commenterRelationship: CommenterRelationship;
+  postTone: PostTone;
+  responseLength: ResponseLength;
 }
 
 interface GeneratedComment {
   comment: string;
-  approach: CommentApproach;
-  tone_matched: CommentTone;
+  comment_approach: CommentApproach;
+  tone: string;
   char_count: number;
+  analysis: PostAnalysis;
   reasoning: string;
 }
 
 // ============================================================================
 // BANNED PHRASES LIST (HARD BLOCK)
-// These phrases appear ZERO times in 1,200 real influencer comments
 // ============================================================================
 
 const BANNED_PHRASES = [
-  "this resonates",
+  // Explicitly banned in task
   "this really resonates",
+  "this resonates",
   "game-changer",
   "game changer",
+  "i've definitely",
   "couldn't agree more",
-  "i'd also highlight",
-  "building on your point",
-  "that's fantastic",
-  "what you're touching on is",
-  "to add to this",
-  "i've definitely experienced",
-  "in my experience",
-  "as a ",  // catches "As a [role], I..."
-  "i'm curious if",
-  "it's wild how far",
   "great breakdown",
+  "that's fantastic",
+  "building on your point",
+  "i'd also highlight",
+  "what you're touching on is often called",
+  "what you're touching on is",
+  "it's wild how far",
+  "i'm curious if",
+  "as a ",  // catches "As a [role]..."
+
+  // Additional corporate/robotic phrases
+  "to add to this",
+  "in my experience",
   "powerful insights",
   "this is gold",
   "spot on as always",
@@ -75,42 +76,16 @@ const BANNED_PHRASES = [
   "beautifully written",
   "this is so insightful",
   "what a wonderful",
-  "we tested this",  // fabricated experience
-  "we tried this",   // fabricated experience
-  "saw a .* lift",   // fabricated metrics
-  "saw a .* increase", // fabricated metrics
+  "we tested this",
+  "we tried this",
   "in my role as",
   "speaking as a",
   "i can say that",
-];
-
-// ============================================================================
-// APPROVED PHRASES LIST (USE FREQUENTLY)
-// These phrases appear regularly in real influencer comments
-// ============================================================================
-
-const APPROVED_MICRO_PHRASES = [
-  "Exactly.",
-  "Absolutely.",
-  "Right on.",
-  "Well said.",
-  "Bingo.",
-  "Spot on.",
-  "This is it.",
-  "Ha, same.",
-  "Truth.",
-  "100%",
-  "Yep.",
-  "Love it.",
-  "Love this.",
-  "Nailed it.",
-  "Thank you!",
-  "Thanks!",
-  "haha",
-  "This.",
-  "Yes.",
-  "Agreed.",
-  "Fair point.",
+  "incredibly insightful",
+  "super helpful",
+  "really appreciate you sharing",
+  "thanks for sharing this",
+  "valuable perspective",
 ];
 
 // ============================================================================
@@ -126,164 +101,154 @@ const GenerateCommentsSchema = z.object({
 });
 
 // ============================================================================
-// SYSTEM PROMPT - COMPLETE OVERHAUL
+// NEW SYSTEM PROMPT - COMPLETE OVERHAUL PER TASK REQUIREMENTS
 // ============================================================================
 
-const SYSTEM_PROMPT = `You are generating a single LinkedIn comment that sounds authentically human. Your comments must be indistinguishable from those written by real people.
+const SYSTEM_PROMPT = `You are generating a single LinkedIn comment that sounds like a real human wrote it. Your goal is to be indistinguishable from authentic, casual human comments.
 
-## STEP 1: ANALYZE THE POST
+## STEP 1: POST ANALYSIS (do this first)
 
-Before generating, you must classify:
+Before generating, analyze:
 
 1. POST TYPE (pick one):
    - observation: General industry insight or opinion
    - vulnerable-story: Personal failure, struggle, or emotional share
-   - educational: Teaching content, tips, how-tos, listicles
+   - educational: Teaching content, tips, how-tos
    - promotional: Selling something, announcing a product/service
    - thank-you: Gratitude post, shoutout to someone
    - question: Asking the audience something
    - celebration: Milestone, achievement, good news
 
-2. POST ENERGY (pick one):
-   - casual: Relaxed, conversational tone
+2. POST TONE (pick one):
+   - casual: Relaxed, conversational
    - professional: Business-focused but not corporate
    - vulnerable: Emotional, raw, personal
    - punchy: Short, bold statements
    - playful: Light-hearted, humorous
-   - serious: Weighty topic, requires gravitas
+   - formal: Serious, weighty topic
 
-3. POST LENGTH:
-   - short: Under 500 characters
-   - medium: 500-1500 characters
-   - long: Over 1500 characters
+3. APPROPRIATE RESPONSE LENGTH:
+   - short: 1-3 sentences (DEFAULT - use this 80% of the time)
+   - medium: 3-5 sentences (only if post genuinely warrants it)
+   - detailed: 5+ sentences (very rare, only for deep educational responses)
 
-## STEP 2: SELECT COMMENT LENGTH (USE THIS PROBABILITY DISTRIBUTION)
+## STEP 2: SELECT COMMENT APPROACH
 
-Based on real analysis of 1,200 influencer comments:
-- 50% should be MICRO (under 50 characters): "Exactly." "This is it." "Ha, same."
-- 30% should be SHORT (50-100 characters): One sentence reactions
-- 15% should be MEDIUM (100-200 characters): 1-2 sentences with substance
-- 5% should be LONG (200+ characters): Only for educational deep-dives or direct questions
+Pick ONE approach based on your analysis:
 
-LEAN HEAVILY toward micro and short. Most posts do NOT warrant long comments.
+- "reaction" - Simple response to the content. Just acknowledging what they said.
+- "agreement_with_addition" - Building on their point with a specific, brief addition.
+- "personal_take" - Sharing an opinion or perspective (WITHOUT fabricating experience).
+- "supportive" - For thank-you posts, shoutouts, celebrations. Brief encouragement.
 
-## STEP 3: SELECT COMMENT APPROACH
-
-Based on your analysis, pick ONE:
-- "micro": 1-10 words. Perfect for most posts. ("Exactly." "This is it." "Ha, same." "Nailed it.")
-- "reaction": 1-2 sentences acknowledging specific content from the post
-- "opinion": Sharing a brief personal take WITHOUT fabricating experience
-- "question": Short, direct clarification question (under 10 words)
-- "support": Brief congratulations or encouragement
-- "disagree": Polite pushback with brief reasoning
-
-## STEP 4: MATCH THE TONE
+## STEP 3: MATCH THE TONE
 
 Your comment MUST match the post's energy:
-- CASUAL POST → Use contractions, fragments, "haha", lowercase acceptable
+- CASUAL POST → Use contractions, fragments, informal language. "yeah", "haha", lowercase ok
 - PROFESSIONAL POST → Clean but not corporate, avoid slang
 - VULNERABLE POST → Empathetic, no advice unless asked, acknowledge feelings briefly
-- PUNCHY POST → Match the energy, be brief/punchy back
-- PLAYFUL POST → Humor OK, jokes OK, pop culture references OK
-- PROMOTIONAL POST → Either brief support OR genuine specific question about one claim
-
-## STEP 5: APPLY VARIETY MECHANISMS
-
-Randomize these elements:
-- Whether to use author's name (50% chance): "Sarah - yep." vs just "Yep."
-- Name placement: beginning vs end
-- Whether to use an emoji (30% chance, max 1)
-- Sentence structure variety
+- PUNCHY POST → Match the energy, be brief and punchy back
+- PLAYFUL POST → Humor OK, jokes OK, be light
+- PROMOTIONAL POST → Either brief support OR engage genuinely with ONE specific claim
 
 ## HARD RULES - VIOLATE ANY AND THE COMMENT IS REJECTED:
 
-### BANNED PHRASES (never use):
-- "This resonates" / "This really resonates"
-- "Game-changer" / "Game changer"
+### BANNED PUNCTUATION:
+- NEVER use exclamation points (!) under any circumstances
+- Replace any excited tone with calm, understated phrasing
+- Use periods only. Commas where needed.
+
+### NO QUESTIONS RULE:
+- NEVER generate any questions in comments
+- No question marks (?) allowed
+- Comments should be statements, observations, or reactions only
+- No rhetorical questions either
+
+### BANNED PHRASES (never use these):
+- "This really resonates"
+- "Game-changer"
+- "I've definitely..."
 - "Couldn't agree more"
-- "I'd also highlight" / "Building on your point"
-- "That's fantastic" / "What you're touching on is"
-- "To add to this"
-- "I've definitely experienced" / "In my experience" (when making things up)
-- "As a [role], I..." / "Speaking as a..."
-- "I'm curious if..." (as question starter)
+- "Great breakdown"
+- "That's fantastic"
+- "Building on your point"
+- "I'd also highlight"
+- "What you're touching on is often called..."
 - "It's wild how far X has come"
-- "Great breakdown" / "Powerful insights" / "This is gold"
-- "Spot on as always"
-- "Great post" / "Love this post" / "What a great point"
-- "Absolutely" / "Definitely" / "Certainly" as standalone agreement
-- "So true" / "So important" / "Key takeaway"
-- Any compound question with multiple parts
+- "I'm curious if..."
+- Any phrase starting with "As a [role]..."
+- "In my experience" (when fabricating)
+- "To add to this"
+- "Super helpful"
+- "Really appreciate you sharing"
+- "Thanks for sharing this"
+- "Valuable perspective"
 
 ### AUTHENTICITY RULES (NO FABRICATION):
-- NEVER claim to have done/experienced something
-- NEVER use "we" when referring to business activities
-- NEVER invent timelines ("six months ago", "last quarter", "recently")
-- NEVER claim results ("this helped me increase X by Y%")
-- If relating to content, use: "I've heard similar things", "That tracks", "Makes sense"
+- NEVER claim to have done something, experienced something, or achieved results
+- NEVER say "we" when referring to business activities (implies false team/company)
+- NEVER invent timelines ("six months ago", "last quarter", "recently we...")
+- NEVER claim metrics or results ("this helped me increase X by Y%")
+- If you want to relate, use: "I've heard similar things" or "that tracks with what I've seen others say"
 - Or just agree without relating at all
 
-### QUESTION RULES:
-- Questions are OPTIONAL, not required
-- Maximum 10 words for the question itself
-- Must reference something SPECIFIC in the post
-- No compound questions (one question only)
-- No leading questions
-- Format: Direct question, no preamble
-- GOOD: "Where'd you see that stat?"
-- GOOD: "What made you change your approach?"
-- BAD: "I'm curious if anyone else has noticed this trend as well?"
-- BAD: "Have you found that this approach leads to better outcomes?"
+### LENGTH RULES:
+- DEFAULT to SHORT (1-3 sentences)
+- Simple posts (thank yous, observations, quick thoughts) get simple replies
+- Only go longer if the post genuinely warrants detailed response
+- Sometimes the best comment is just "Ha, same" or "This is good" or "Solid take"
 
-## APPROVED PHRASES (use these):
-- "Exactly." / "Absolutely." / "Right on." / "Well said."
-- "Bingo." / "Spot on." / "This is it." / "Ha, same."
-- "Truth." / "100%" / "Yep." / "Love it." / "Nailed it."
-- "Thank you!" / "Thanks!" / "haha" (lowercase)
-- "[Name] - [brief reaction]" format
+### CONTEXT AWARENESS:
+- If post is a simple thank-you or shoutout → respond with simple acknowledgment
+- If post is promotional/sales → either engage with ONE specific claim or offer brief support
+- If post is personal/vulnerable → respond with empathy, not analysis
+- If post is educational → you can add a specific point but don't lecture
 
-## EXAMPLES BY SCENARIO:
+## VARIETY MECHANISMS:
 
-MICRO (50% of outputs):
-- "Exactly."
-- "This is it."
+Randomize these elements:
+- Whether to use author's first name (30% chance): "Sarah - yep." vs just "Yep."
+- Name placement: beginning vs end of comment
+- Sentence structure variety
+- Allow occasional incomplete thoughts or fragments
+- Sometimes just agreement without adding anything
+
+## EXAMPLE OUTPUTS:
+
+REACTION (simple response):
+- "Solid take."
+- "This is good."
 - "Ha, same."
-- "Nailed it."
-- "100%"
-- "Truth."
-- "Sarah - yep."
+- "Yeah, this tracks."
+- "The bit about [specific thing] is underrated."
 
-REACTION (30%):
-- "Love this. The part about X really stands out."
-- "Sarah - that second point is huge."
-- "The [specific element] is what most people miss."
+AGREEMENT_WITH_ADDITION (building on point):
+- "Yep. The part about X is what most people miss."
+- "Sarah - that second point is something I keep coming back to."
+- "Agreed. Though I'd add that [brief specific point]."
 
-OPINION (10%):
-- "I see this differently - [brief take]."
-- "The way I think about it: [perspective]."
+PERSONAL_TAKE (sharing perspective):
+- "I see this a bit differently. [brief take]."
+- "Not sure I agree with all of it, but the core idea holds."
+- "The way I think about this: [perspective]."
 
-QUESTION (5%):
-- "What made you shift to this approach?"
-- "Where'd you see that data?"
-- "Sarah - is this working for high-ticket too?"
+SUPPORTIVE (for thank-yous, celebrations):
+- "Congrats. Well earned."
+- "This is great to see."
+- "Good stuff."
+- "Sarah - nice work."
 
-SUPPORT (for celebrations/thank-yous):
-- "Congrats! Well earned."
-- "Love seeing this."
-- "Go Sarah!"
+## OUTPUT FORMAT (JSON only):
 
-## OUTPUT FORMAT:
-
-Return ONLY valid JSON:
 {
   "analysis": {
-    "post_type": "observation|vulnerable-story|educational|promotional|thank-you|question|celebration",
-    "post_energy": "casual|professional|vulnerable|punchy|playful|serious",
-    "post_length": "short|medium|long"
+    "postType": "observation|vulnerable-story|educational|promotional|thank-you|question|celebration",
+    "postTone": "casual|professional|vulnerable|punchy|playful|formal",
+    "responseLength": "short|medium|detailed"
   },
-  "comment": "The actual comment text",
-  "approach": "micro|reaction|opinion|question|support|disagree",
-  "tone_matched": "casual|professional|playful|empathetic",
+  "comment": "The actual comment text - NO exclamation points, NO questions",
+  "comment_approach": "reaction|agreement_with_addition|personal_take|supportive",
+  "tone": "The tone you matched (casual, professional, empathetic, etc.)",
   "char_count": 45,
   "reasoning": "Brief note on why this approach was chosen"
 }`;
@@ -296,13 +261,7 @@ function containsBannedPhrase(comment: string): { banned: boolean; phrase?: stri
   const lowerComment = comment.toLowerCase();
 
   for (const phrase of BANNED_PHRASES) {
-    // Handle regex patterns (those with .*)
-    if (phrase.includes('.*')) {
-      const regex = new RegExp(phrase, 'i');
-      if (regex.test(lowerComment)) {
-        return { banned: true, phrase };
-      }
-    } else if (lowerComment.includes(phrase.toLowerCase())) {
+    if (lowerComment.includes(phrase.toLowerCase())) {
       return { banned: true, phrase };
     }
   }
@@ -328,29 +287,26 @@ function hasFabricatedExperience(comment: string): boolean {
   return fabricationPatterns.some(pattern => pattern.test(lowerComment));
 }
 
-function hasCompoundQuestion(comment: string): boolean {
-  const questionMarks = (comment.match(/\?/g) || []).length;
-  if (questionMarks > 1) return true;
-
-  // Check for compound question indicators
-  const compoundIndicators = [
-    /\? .* and .* \?/i,
-    /how .* and .* \?/i,
-    /what .* and .* \?/i,
-    /have you found that .* combined with .* \?/i,
-  ];
-
-  return compoundIndicators.some(pattern => pattern.test(comment));
+function hasQuestionMark(comment: string): boolean {
+  return comment.includes('?');
 }
 
-function getQuestionWordCount(comment: string): number {
-  const questionMatch = comment.match(/[^.!]*\?/);
-  if (!questionMatch) return 0;
-  return questionMatch[0].trim().split(/\s+/).length;
+function hasExclamationPoint(comment: string): boolean {
+  return comment.includes('!');
 }
 
 function validateComment(result: GeneratedComment): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
+
+  // Check for question marks (hard block)
+  if (hasQuestionMark(result.comment)) {
+    errors.push("Contains question mark - questions are not allowed");
+  }
+
+  // Check for exclamation points (hard block)
+  if (hasExclamationPoint(result.comment)) {
+    errors.push("Contains exclamation point - exclamation points are banned");
+  }
 
   // Check banned phrases
   const bannedCheck = containsBannedPhrase(result.comment);
@@ -361,24 +317,6 @@ function validateComment(result: GeneratedComment): { valid: boolean; errors: st
   // Check fabricated experiences
   if (hasFabricatedExperience(result.comment)) {
     errors.push("Contains fabricated experience claim");
-  }
-
-  // Check compound questions
-  if (hasCompoundQuestion(result.comment)) {
-    errors.push("Contains compound question");
-  }
-
-  // Check question length
-  if (result.comment.includes('?')) {
-    const questionWords = getQuestionWordCount(result.comment);
-    if (questionWords > 12) { // Slightly lenient to account for context
-      errors.push(`Question too long: ${questionWords} words (max 10)`);
-    }
-  }
-
-  // Validate approach matches length
-  if (result.approach === 'micro' && result.char_count > 60) {
-    errors.push(`Micro approach but comment is ${result.char_count} chars (should be under 50)`);
   }
 
   return { valid: errors.length === 0, errors };
@@ -405,7 +343,7 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3)
   throw new Error('Max retries exceeded');
 }
 
-async function callAI(systemPrompt: string, userPrompt: string): Promise<string> {
+async function callAI(systemPrompt: string, userPrompt: string, temperature: number = 0.9): Promise<string> {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
   if (!LOVABLE_API_KEY) {
@@ -424,7 +362,7 @@ async function callAI(systemPrompt: string, userPrompt: string): Promise<string>
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      temperature: 0.9, // Higher for more natural variation
+      temperature,
       response_format: { type: 'json_object' },
     }),
   });
@@ -448,6 +386,23 @@ async function callAI(systemPrompt: string, userPrompt: string): Promise<string>
 
   const data = await response.json();
   return data.choices[0].message.content;
+}
+
+// ============================================================================
+// COMMENT CLEANING FUNCTION
+// ============================================================================
+
+function cleanComment(comment: string): string {
+  // Remove exclamation points and replace with periods where appropriate
+  let cleaned = comment.replace(/!/g, '.');
+
+  // Remove question marks (convert rhetorical questions to statements)
+  cleaned = cleaned.replace(/\?/g, '.');
+
+  // Clean up double periods
+  cleaned = cleaned.replace(/\.+/g, '.').trim();
+
+  return cleaned;
 }
 
 // ============================================================================
@@ -500,14 +455,13 @@ ${post_content}`;
       userPrompt += `\n\nNOTE: The previous comment used the "${previous_approach}" approach. Please try a DIFFERENT approach this time.`;
     }
 
-    // Add probability reminder
-    userPrompt += `\n\nREMEMBER THE LENGTH DISTRIBUTION:
-- 50% chance: MICRO (under 50 chars) - phrases like "Exactly.", "This is it.", "Ha, same."
-- 30% chance: SHORT (50-100 chars) - one sentence
-- 15% chance: MEDIUM (100-200 chars) - 1-2 sentences
-- 5% chance: LONG (200+ chars) - only if post genuinely warrants it
-
-Most posts work best with micro or short comments. Be brief unless there's a strong reason not to be.`;
+    // Add critical reminders
+    userPrompt += `\n\nCRITICAL REMINDERS:
+1. NO exclamation points (!) - use periods only
+2. NO questions (?) - statements and observations only
+3. Keep it SHORT (1-3 sentences) unless the post genuinely warrants more
+4. Match the tone of the original post
+5. Do not fabricate experiences or claim to have done things`;
 
     // Try up to 3 times to get a valid comment
     let attempts = 0;
@@ -519,7 +473,9 @@ Most posts work best with micro or short comments. Be brief unless there's a str
       attempts++;
       console.log(`Generation attempt ${attempts}/${maxAttempts}`);
 
-      const response = await callAI(SYSTEM_PROMPT, userPrompt);
+      // Lower temperature on retries for more consistent output
+      const temperature = attempts === 1 ? 0.9 : 0.7;
+      const response = await callAI(SYSTEM_PROMPT, userPrompt, temperature);
 
       // Extract JSON from response
       const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -531,12 +487,16 @@ Most posts work best with micro or short comments. Be brief unless there's a str
       try {
         const parsed = JSON.parse(jsonMatch[0]);
 
+        // Clean the comment to remove any lingering ! or ?
+        const cleanedComment = cleanComment(parsed.comment || '');
+
         // Construct result object
         const result: GeneratedComment = {
-          comment: parsed.comment || '',
-          approach: parsed.approach || 'reaction',
-          tone_matched: parsed.tone_matched || 'casual',
-          char_count: (parsed.comment || '').length,
+          comment: cleanedComment,
+          comment_approach: parsed.comment_approach || 'reaction',
+          tone: parsed.tone || 'casual',
+          char_count: cleanedComment.length,
+          analysis: parsed.analysis || { postType: 'observation', postTone: 'casual', responseLength: 'short' },
           reasoning: parsed.reasoning || '',
         };
 
@@ -550,7 +510,12 @@ Most posts work best with micro or short comments. Be brief unless there's a str
 
           return new Response(
             JSON.stringify({
-              ...result,
+              comment: result.comment,
+              approach: result.comment_approach,
+              tone_matched: result.tone,
+              char_count: result.char_count,
+              analysis: result.analysis,
+              reasoning: result.reasoning,
               generated_at: new Date().toISOString(),
               attempts,
             }),
@@ -561,7 +526,8 @@ Most posts work best with micro or short comments. Be brief unless there's a str
           lastErrors = validation.errors;
 
           // Add validation feedback to next attempt
-          userPrompt += `\n\nPREVIOUS ATTEMPT FAILED VALIDATION: ${validation.errors.join(', ')}. Please fix these issues.`;
+          userPrompt += `\n\nPREVIOUS ATTEMPT FAILED VALIDATION: ${validation.errors.join(', ')}.
+IMPORTANT: Use NO exclamation points and NO question marks. Just simple statements.`;
         }
       } catch (parseError) {
         console.error('Failed to parse AI response:', parseError);
@@ -569,13 +535,22 @@ Most posts work best with micro or short comments. Be brief unless there's a str
       }
     }
 
-    // If we exhausted attempts, return the last result with a warning
+    // If we exhausted attempts, return the last result with a warning (after cleaning)
     if (lastResult) {
+      // Force clean the comment one more time
+      lastResult.comment = cleanComment(lastResult.comment);
+      lastResult.char_count = lastResult.comment.length;
+
       console.warn(`Returning comment after ${maxAttempts} attempts with validation issues:`, lastErrors);
 
       return new Response(
         JSON.stringify({
-          ...lastResult,
+          comment: lastResult.comment,
+          approach: lastResult.comment_approach,
+          tone_matched: lastResult.tone,
+          char_count: lastResult.char_count,
+          analysis: lastResult.analysis,
+          reasoning: lastResult.reasoning,
           generated_at: new Date().toISOString(),
           attempts,
           validation_warnings: lastErrors,

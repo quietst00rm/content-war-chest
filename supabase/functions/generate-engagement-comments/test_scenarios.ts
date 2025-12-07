@@ -1,16 +1,17 @@
 /**
- * AI Comment Generation Test Suite
+ * AI Comment Generation Test Suite - Updated for New Requirements
  *
  * This file contains test scenarios and validation utilities for the
- * overhauled AI comment generation system.
+ * completely overhauled AI comment generation system.
+ *
+ * NEW REQUIREMENTS:
+ * - NO question marks allowed
+ * - NO exclamation points allowed
+ * - New approach types: reaction, agreement_with_addition, personal_take, supportive
+ * - No fabricated experiences
+ * - No banned phrases
  *
  * Run with: deno run --allow-net test_scenarios.ts
- *
- * The test scenarios cover all the major post types and validate:
- * - No banned phrases are used
- * - Appropriate length distribution
- * - Tone matching
- * - No fabricated experiences
  */
 
 // ============================================================================
@@ -24,9 +25,9 @@ export const TEST_SCENARIOS = {
     author_name: "Sarah Chen",
     author_title: "Marketing Director at TechCorp",
     expected_post_type: "observation",
-    expected_energy: "casual",
-    valid_approaches: ["micro", "reaction", "opinion"],
-    notes: "Should get mostly short, agreeable comments"
+    expected_tone: "casual",
+    valid_approaches: ["reaction", "agreement_with_addition", "personal_take"],
+    notes: "Should get mostly short, agreeable comments. NO questions."
   },
 
   // Scenario 2: Vulnerable personal failure story
@@ -43,9 +44,9 @@ If you've been through this, I'd love to hear how you got through it.`,
     author_name: "Michael Torres",
     author_title: "Former VP of Sales",
     expected_post_type: "vulnerable-story",
-    expected_energy: "vulnerable",
-    valid_approaches: ["support", "micro"],
-    notes: "Should be empathetic, no advice, brief acknowledgment"
+    expected_tone: "vulnerable",
+    valid_approaches: ["supportive", "reaction"],
+    notes: "Should be empathetic, no advice, brief acknowledgment. NO questions."
   },
 
   // Scenario 3: Listicle with 5 tips
@@ -62,9 +63,9 @@ Save this post. Seriously.`,
     author_name: "Alex Rivera",
     author_title: "3x Founder | Angel Investor",
     expected_post_type: "educational",
-    expected_energy: "punchy",
-    valid_approaches: ["micro", "reaction", "opinion"],
-    notes: "Can engage with specific points but keep it brief"
+    expected_tone: "punchy",
+    valid_approaches: ["reaction", "agreement_with_addition", "personal_take"],
+    notes: "Can engage with specific points but keep it brief. NO questions."
   },
 
   // Scenario 4: Promotional post for a course
@@ -85,9 +86,9 @@ Link in comments.`,
     author_name: "Jordan Blake",
     author_title: "LinkedIn Coach | 500K+ Followers",
     expected_post_type: "promotional",
-    expected_energy: "professional",
-    valid_approaches: ["micro", "question", "support"],
-    notes: "Either brief support or specific question about one claim"
+    expected_tone: "professional",
+    valid_approaches: ["reaction", "supportive"],
+    notes: "Either brief support or engage with ONE specific claim. NO questions."
   },
 
   // Scenario 5: Thank-you/shoutout post
@@ -102,9 +103,9 @@ Thank you, Lisa. I owe you one (or a hundred).`,
     author_name: "David Park",
     author_title: "CEO at Growth Agency",
     expected_post_type: "thank-you",
-    expected_energy: "casual",
-    valid_approaches: ["micro", "support"],
-    notes: "Brief, supportive, can be very short"
+    expected_tone: "casual",
+    valid_approaches: ["reaction", "supportive"],
+    notes: "Brief, supportive, can be very short. NO questions."
   },
 
   // Scenario 6: Controversial opinion post
@@ -121,12 +122,12 @@ I'm not saying we need to go back to 5 days in office. But full remote? It's not
     author_name: "Rachel Kim",
     author_title: "VP of People @ Fortune 500",
     expected_post_type: "observation",
-    expected_energy: "serious",
-    valid_approaches: ["micro", "reaction", "opinion", "disagree"],
-    notes: "Can agree, disagree, or offer alternative perspective briefly"
+    expected_tone: "serious",
+    valid_approaches: ["reaction", "agreement_with_addition", "personal_take"],
+    notes: "Can agree, disagree, or offer alternative perspective briefly. NO questions."
   },
 
-  // Scenario 7: Question asked to audience
+  // Scenario 7: Question asked to audience (we should still respond without asking questions back)
   audience_question: {
     post_content: `Hiring managers: What's the #1 thing that makes you instantly reject a resume?
 
@@ -136,9 +137,9 @@ Drop your biggest pet peeves below.`,
     author_name: "Chris Anderson",
     author_title: "Career Coach",
     expected_post_type: "question",
-    expected_energy: "casual",
-    valid_approaches: ["reaction", "opinion"],
-    notes: "Can answer the question briefly or react"
+    expected_tone: "casual",
+    valid_approaches: ["reaction", "personal_take"],
+    notes: "Can answer their question with a statement or react. NO questions in response."
   },
 
   // Scenario 8: Celebration of milestone
@@ -153,9 +154,9 @@ Here's to the next 100K. Let's go!`,
     author_name: "Emma Thompson",
     author_title: "Content Creator | Speaker",
     expected_post_type: "celebration",
-    expected_energy: "playful",
-    valid_approaches: ["micro", "support"],
-    notes: "Brief congrats, can be very short"
+    expected_tone: "playful",
+    valid_approaches: ["reaction", "supportive"],
+    notes: "Brief congrats, can be very short. NO questions."
   },
 };
 
@@ -164,22 +165,25 @@ Here's to the next 100K. Let's go!`,
 // ============================================================================
 
 export const BANNED_PHRASES = [
-  "this resonates",
+  // Explicitly banned in task
   "this really resonates",
+  "this resonates",
   "game-changer",
   "game changer",
+  "i've definitely",
   "couldn't agree more",
-  "i'd also highlight",
-  "building on your point",
-  "that's fantastic",
-  "what you're touching on is",
-  "to add to this",
-  "i've definitely experienced",
-  "in my experience",
-  "as a ",
-  "i'm curious if",
-  "it's wild how far",
   "great breakdown",
+  "that's fantastic",
+  "building on your point",
+  "i'd also highlight",
+  "what you're touching on is often called",
+  "what you're touching on is",
+  "it's wild how far",
+  "i'm curious if",
+  "as a ",  // catches "As a [role]..."
+  // Additional corporate/robotic phrases
+  "to add to this",
+  "in my experience",
   "powerful insights",
   "this is gold",
   "spot on as always",
@@ -203,6 +207,11 @@ export const BANNED_PHRASES = [
   "in my role as",
   "speaking as a",
   "i can say that",
+  "incredibly insightful",
+  "super helpful",
+  "really appreciate you sharing",
+  "thanks for sharing this",
+  "valuable perspective",
 ];
 
 // ============================================================================
@@ -238,23 +247,24 @@ export function hasFabricatedExperience(comment: string): boolean {
   return patterns.some(pattern => pattern.test(comment));
 }
 
-export function hasCompoundQuestion(comment: string): boolean {
-  const questionMarks = (comment.match(/\?/g) || []).length;
-  return questionMarks > 1;
+// NEW: Check for question marks (now banned)
+export function hasQuestionMark(comment: string): boolean {
+  return comment.includes('?');
 }
 
-export function getQuestionWordCount(comment: string): number {
-  const questionMatch = comment.match(/[^.!]*\?/);
-  if (!questionMatch) return 0;
-  return questionMatch[0].trim().split(/\s+/).length;
+// NEW: Check for exclamation points (now banned)
+export function hasExclamationPoint(comment: string): boolean {
+  return comment.includes('!');
 }
 
 export function getLengthCategory(charCount: number): string {
-  if (charCount < 50) return "micro";
-  if (charCount < 100) return "short";
-  if (charCount < 200) return "medium";
-  return "long";
+  if (charCount < 80) return "short";
+  if (charCount < 150) return "medium";
+  return "detailed";
 }
+
+// NEW: Valid approach types
+export const VALID_APPROACHES = ['reaction', 'agreement_with_addition', 'personal_take', 'supportive'] as const;
 
 // ============================================================================
 // TEST RUNNER
@@ -270,9 +280,9 @@ interface TestResult {
   validations: {
     noBannedPhrases: boolean;
     noFabricatedExperience: boolean;
-    noCompoundQuestions: boolean;
-    questionLengthOk: boolean;
-    approachMatchesLength: boolean;
+    noQuestionMarks: boolean;
+    noExclamationPoints: boolean;
+    validApproachType: boolean;
   };
   passed: boolean;
   errors: string[];
@@ -300,27 +310,22 @@ export function validateComment(
     errors.push("Contains fabricated experience claim");
   }
 
-  // Check compound questions
-  const hasCompound = hasCompoundQuestion(comment);
-  if (hasCompound) {
-    errors.push("Contains compound question");
+  // NEW: Check for question marks (now banned)
+  const hasQuestion = hasQuestionMark(comment);
+  if (hasQuestion) {
+    errors.push("Contains question mark - questions are banned");
   }
 
-  // Check question length
-  let questionLengthOk = true;
-  if (comment.includes('?')) {
-    const questionWords = getQuestionWordCount(comment);
-    if (questionWords > 10) {
-      questionLengthOk = false;
-      errors.push(`Question too long: ${questionWords} words (max 10)`);
-    }
+  // NEW: Check for exclamation points (now banned)
+  const hasExclamation = hasExclamationPoint(comment);
+  if (hasExclamation) {
+    errors.push("Contains exclamation point - exclamation points are banned");
   }
 
-  // Check approach matches length
-  let approachMatchesLength = true;
-  if (approach === 'micro' && charCount > 60) {
-    approachMatchesLength = false;
-    errors.push(`Micro approach but comment is ${charCount} chars (should be under 50)`);
+  // Check valid approach type
+  const validApproach = VALID_APPROACHES.includes(approach as any);
+  if (!validApproach) {
+    errors.push(`Invalid approach type: "${approach}". Must be one of: ${VALID_APPROACHES.join(', ')}`);
   }
 
   return {
@@ -333,9 +338,9 @@ export function validateComment(
     validations: {
       noBannedPhrases: !bannedCheck.banned,
       noFabricatedExperience: !hasFabricated,
-      noCompoundQuestions: !hasCompound,
-      questionLengthOk,
-      approachMatchesLength,
+      noQuestionMarks: !hasQuestion,
+      noExclamationPoints: !hasExclamation,
+      validApproachType: validApproach,
     },
     passed: errors.length === 0,
     errors,
@@ -343,44 +348,38 @@ export function validateComment(
 }
 
 // ============================================================================
-// SAMPLE OUTPUTS FOR REFERENCE
+// SAMPLE OUTPUTS FOR REFERENCE (Updated - no ! or ?)
 // ============================================================================
 
 export const SAMPLE_OUTPUTS = {
-  // Expected good outputs for each scenario type
-  micro_examples: [
-    "Exactly.",
-    "This is it.",
-    "Ha, same.",
-    "Nailed it.",
-    "100%",
-    "Truth.",
-    "Love it.",
-    "Spot on.",
-    "Yep.",
-  ],
-
+  // Expected good outputs for each approach type
   reaction_examples: [
-    "Love this. The part about cash flow is what most people miss.",
-    "Sarah - that second point is huge.",
-    "The hiring point really stands out here.",
+    "Solid take.",
+    "This is good.",
+    "Ha, same.",
+    "Yeah, this tracks.",
+    "The bit about cash flow is underrated.",
+    "Sarah - yep.",
   ],
 
-  opinion_examples: [
-    "I see this differently - remote can work if you're intentional.",
-    "The way I think about it: it's less about location, more about culture.",
+  agreement_with_addition_examples: [
+    "Yep. The part about X is what most people miss.",
+    "Agreed. The hiring piece especially.",
+    "Sarah - that second point is something I keep coming back to.",
   ],
 
-  question_examples: [
-    "What made you shift to this approach?",
-    "Where'd you see that data?",
-    "Is this working for B2B too?",
+  personal_take_examples: [
+    "I see this a bit differently. Remote can work if you're intentional.",
+    "Not sure I agree with all of it, but the core idea holds.",
+    "The way I think about this: it's less about location, more about culture.",
   ],
 
-  support_examples: [
-    "Congrats! Well earned.",
+  supportive_examples: [
+    "Congrats. Well earned.",
+    "This is great to see.",
+    "Good stuff.",
+    "Sarah - nice work.",
     "Love seeing this.",
-    "Go Sarah!",
   ],
 };
 
@@ -434,43 +433,60 @@ export function generateStatistics(results: TestResult[]): {
 // ============================================================================
 
 if (import.meta.main) {
-  console.log("AI Comment Generation Test Suite");
-  console.log("================================\n");
+  console.log("AI Comment Generation Test Suite - Updated");
+  console.log("==========================================\n");
+
+  console.log("NEW REQUIREMENTS:");
+  console.log("  - NO question marks (?) allowed");
+  console.log("  - NO exclamation points (!) allowed");
+  console.log("  - Approach types: reaction, agreement_with_addition, personal_take, supportive");
+  console.log("  - No fabricated experiences");
+  console.log("  - No banned phrases\n");
 
   console.log("Test Scenarios Available:");
   for (const [name, scenario] of Object.entries(TEST_SCENARIOS)) {
     console.log(`\n[${name}]`);
     console.log(`  Post Type: ${scenario.expected_post_type}`);
-    console.log(`  Energy: ${scenario.expected_energy}`);
+    console.log(`  Tone: ${scenario.expected_tone}`);
     console.log(`  Valid Approaches: ${scenario.valid_approaches.join(", ")}`);
     console.log(`  Notes: ${scenario.notes}`);
   }
 
-  console.log("\n\nSample Valid Comments:");
-  console.log("\nMicro Comments (50% target):");
-  for (const example of SAMPLE_OUTPUTS.micro_examples) {
+  console.log("\n\nSample Valid Comments (NO ! or ?):");
+
+  console.log("\nReaction Comments:");
+  for (const example of SAMPLE_OUTPUTS.reaction_examples) {
     console.log(`  "${example}" (${example.length} chars)`);
   }
 
-  console.log("\nReaction Comments (30% target):");
-  for (const example of SAMPLE_OUTPUTS.reaction_examples) {
+  console.log("\nAgreement With Addition Comments:");
+  for (const example of SAMPLE_OUTPUTS.agreement_with_addition_examples) {
+    console.log(`  "${example}" (${example.length} chars)`);
+  }
+
+  console.log("\nPersonal Take Comments:");
+  for (const example of SAMPLE_OUTPUTS.personal_take_examples) {
+    console.log(`  "${example}" (${example.length} chars)`);
+  }
+
+  console.log("\nSupportive Comments:");
+  for (const example of SAMPLE_OUTPUTS.supportive_examples) {
     console.log(`  "${example}" (${example.length} chars)`);
   }
 
   console.log("\n\nValidation Functions Available:");
   console.log("  - containsBannedPhrase(comment)");
   console.log("  - hasFabricatedExperience(comment)");
-  console.log("  - hasCompoundQuestion(comment)");
-  console.log("  - getQuestionWordCount(comment)");
+  console.log("  - hasQuestionMark(comment)     // NEW - must return false");
+  console.log("  - hasExclamationPoint(comment) // NEW - must return false");
   console.log("  - getLengthCategory(charCount)");
   console.log("  - validateComment(scenario, comment, approach, tone)");
   console.log("  - generateStatistics(results)");
 
   console.log("\n\nTarget Length Distribution:");
-  console.log("  - 50% micro (under 50 chars)");
-  console.log("  - 30% short (50-100 chars)");
-  console.log("  - 15% medium (100-200 chars)");
-  console.log("  - 5% long (200+ chars)");
+  console.log("  - 80% short (1-3 sentences, under 80 chars ideal)");
+  console.log("  - 15% medium (3-5 sentences)");
+  console.log("  - 5% detailed (5+ sentences, only if truly warranted)");
 
   console.log("\n\nTo run actual API tests, use the edge function directly.");
 }

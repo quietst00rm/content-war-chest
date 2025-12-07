@@ -19,18 +19,16 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-// Approach type definitions
-type CommentApproach = 'micro' | 'reaction' | 'opinion' | 'question' | 'support' | 'disagree';
+// NEW approach type definitions (updated per task requirements)
+type CommentApproach = 'reaction' | 'agreement_with_addition' | 'personal_take' | 'supportive';
 type CommentTone = 'casual' | 'professional' | 'playful' | 'empathetic';
 
-// Approach badge styling
+// Approach badge styling (updated for new approach types)
 const APPROACH_STYLES: Record<CommentApproach, { label: string; className: string }> = {
-  micro: { label: 'micro', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
   reaction: { label: 'reaction', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-  opinion: { label: 'opinion', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-  question: { label: 'question', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  support: { label: 'support', className: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400' },
-  disagree: { label: 'disagree', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+  agreement_with_addition: { label: 'agreement+', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  personal_take: { label: 'personal', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  supportive: { label: 'supportive', className: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400' },
 };
 
 export interface EngagementPost {
