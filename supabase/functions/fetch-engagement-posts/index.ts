@@ -551,8 +551,6 @@ serve(async (req) => {
 
       // Generate AI comment if content is long enough and API key is available
       let aiComment: string | null = null;
-      let aiCommentApproach: string | null = null;
-      let aiCommentTone: string | null = null;
 
       if (LOVABLE_API_KEY && post.content.length >= MIN_CONTENT_LENGTH_FOR_AI) {
         console.log(`Generating AI comment for post from ${profile.name || profile.linkedin_url}...`);
@@ -566,8 +564,6 @@ serve(async (req) => {
 
         if (result) {
           aiComment = result.comment;
-          aiCommentApproach = result.approach;
-          aiCommentTone = result.tone;
           aiCommentsGenerated++;
 
           // Update statistics
@@ -616,8 +612,6 @@ serve(async (req) => {
         shares: post.engagement?.shares || 0,
         fetched_at: new Date().toISOString(),
         ai_comment: aiComment,
-        ai_comment_approach: aiCommentApproach,
-        ai_comment_tone: aiCommentTone,
         ai_comment_generated_at: aiComment ? new Date().toISOString() : null,
       };
 
