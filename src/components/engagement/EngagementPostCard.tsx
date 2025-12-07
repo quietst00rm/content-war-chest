@@ -16,22 +16,17 @@ import {
   EyeOff,
   User,
   Sparkles,
-  RefreshCw,
 } from "lucide-react";
 
-// Approach type definitions
-type CommentApproach = 'micro' | 'reaction' | 'opinion' | 'question' | 'support' | 'disagree';
-type CommentTone = 'casual' | 'professional' | 'playful' | 'empathetic';
+interface AIComment {
+  type: "experience" | "value-add" | "question";
+  text: string;
+}
 
-// Approach badge styling
-const APPROACH_STYLES: Record<CommentApproach, { label: string; className: string }> = {
-  micro: { label: 'micro', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-  reaction: { label: 'reaction', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-  opinion: { label: 'opinion', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-  question: { label: 'question', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  support: { label: 'support', className: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400' },
-  disagree: { label: 'disagree', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-};
+interface AICommentsData {
+  comments: AIComment[];
+  generated_at: string;
+}
 
 export interface EngagementPost {
   id: string;
@@ -49,8 +44,6 @@ export interface EngagementPost {
   comments: number;
   shares: number;
   ai_comment: string | null;
-  ai_comment_approach?: string | null;
-  ai_comment_tone?: string | null;
   is_commented: boolean;
   is_hidden: boolean;
   fetched_at: string;
@@ -60,16 +53,32 @@ interface EngagementPostCardProps {
   post: EngagementPost;
 }
 
+const TYPE_LABELS: Record<string, string> = {
+  experience: "Experience",
+  "value-add": "Value-Add",
+  question: "Question",
+};
+
 export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
   const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [copiedCommentIndex, setCopiedCommentIndex] = useState<number | null>(null);
   const queryClient = useQueryClient();
 
-  // Get approach style
-  const approachStyle = post.ai_comment_approach
-    ? APPROACH_STYLES[post.ai_comment_approach as CommentApproach] || APPROACH_STYLES.reaction
-    : null;
+  // Parse existing AI comments from database
+  const parseAIComments = (): AICommentsData | null => {
+    if (!post.ai_comment) return null;
+    try {
+      const parsed = JSON.parse(post.ai_comment);
+      if (parsed.comments && Array.isArray(parsed.comments)) {
+        return parsed as AICommentsData;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const aiComments = parseAIComments();
 
   // Mark as commented mutation
   const markCommentedMutation = useMutation({
@@ -110,75 +119,24 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
     },
   });
 
-  // Regenerate comment mutation
-  const regenerateCommentMutation = useMutation({
-    mutationFn: async () => {
-      setIsRegenerating(true);
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
-
-      const response = await supabase.functions.invoke('generate-engagement-comments', {
-        body: {
-          post_content: post.content,
-          author_name: post.author_name || 'Unknown',
-          author_title: post.author_title || '',
-          regenerate: true,
-          previous_approach: post.ai_comment_approach,
-        },
-      });
-
-      if (response.error) throw response.error;
-
-      const data = response.data;
-
-      // Update the post with the new comment
-      const { error: updateError } = await supabase
-        .from("engagement_posts")
-        .update({
-          ai_comment: data.comment,
-          ai_comment_approach: data.approach,
-          ai_comment_tone: data.tone_matched,
-          ai_comment_generated_at: new Date().toISOString(),
-        })
-        .eq("id", post.id);
-
-      if (updateError) throw updateError;
-
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["engagement-posts"] });
-      toast.success(`New ${data.approach} comment generated`);
-      setIsRegenerating(false);
-    },
-    onError: (error) => {
-      console.error("Regeneration error:", error);
-      toast.error("Failed to regenerate comment");
-      setIsRegenerating(false);
-    },
-  });
-
-  const handleCopyComment = async () => {
-    if (!post.ai_comment) return;
-
+  const handleCopyComment = async (index: number, text: string) => {
     try {
-      await navigator.clipboard.writeText(post.ai_comment);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(text);
+      setCopiedCommentIndex(index);
+      setTimeout(() => setCopiedCommentIndex(null), 2000);
       toast.success("Comment copied!");
     } catch {
       // Fallback for older browsers
       const textarea = document.createElement("textarea");
-      textarea.value = post.ai_comment;
+      textarea.value = text;
       textarea.style.position = "fixed";
       textarea.style.opacity = "0";
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand("copy");
       document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopiedCommentIndex(index);
+      setTimeout(() => setCopiedCommentIndex(null), 2000);
       toast.success("Comment copied!");
     }
   };
@@ -195,9 +153,6 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
     ? post.content.slice(0, 300) + "..."
     : post.content;
 
-  // Get character count display
-  const charCount = post.ai_comment?.length || 0;
-
   return (
     <Card className={`p-4 transition-all ${post.is_commented ? "opacity-60 bg-muted/30" : "bg-card"}`}>
       {/* Header: Author + Time */}
@@ -205,9 +160,9 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 overflow-hidden flex items-center justify-center">
             {post.author_profile_image_url ? (
-              <img
-                src={post.author_profile_image_url}
-                alt={post.author_name || "Author"}
+              <img 
+                src={post.author_profile_image_url} 
+                alt={post.author_name || "Author"} 
                 className="h-full w-full object-cover"
               />
             ) : (
@@ -257,71 +212,50 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
         </span>
       </div>
 
-      {/* AI Comment Block - Single Comment */}
-      {post.ai_comment && (
-        <div className="mb-4">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2 text-xs text-primary">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span className="font-medium">AI Suggestion</span>
-              {approachStyle && (
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${approachStyle.className}`}>
-                  {approachStyle.label}
-                </span>
-              )}
-              <span className="text-muted-foreground">
-                {charCount} chars
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              onClick={() => regenerateCommentMutation.mutate()}
-              disabled={isRegenerating}
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${isRegenerating ? 'animate-spin' : ''}`} />
-            </Button>
+      {/* AI Comment Blocks */}
+      {aiComments && aiComments.comments.length > 0 && (
+        <div className="mb-4 space-y-2">
+          <div className="flex items-center gap-2 text-xs text-primary mb-2">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span className="font-medium">AI Comment Options</span>
           </div>
 
-          <div className="p-3 rounded-lg bg-muted/50 border border-border hover:border-primary/30 transition-colors">
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-sm leading-relaxed flex-1">{post.ai_comment}</p>
-              <Button
-                variant={copied ? "default" : "outline"}
-                size="sm"
-                className="h-11 w-11 p-0 flex-shrink-0"
-                onClick={handleCopyComment}
-              >
-                {copied ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
+          {aiComments.comments.map((comment, index) => (
+            <div
+              key={index}
+              className="p-3 rounded-lg bg-muted/50 border border-border hover:border-primary/30 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 mb-1.5">
+                    {TYPE_LABELS[comment.type] || comment.type}
+                  </Badge>
+                  <p className="text-sm leading-relaxed">{comment.text}</p>
+                </div>
+                <Button
+                  variant={copiedCommentIndex === index ? "default" : "outline"}
+                  size="sm"
+                  className="h-11 w-11 p-0 flex-shrink-0"
+                  onClick={() => handleCopyComment(index, comment.text)}
+                >
+                  {copiedCommentIndex === index ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       )}
 
-      {/* No AI comment message */}
-      {!post.ai_comment && (
+      {/* No AI comments message */}
+      {!aiComments && (
         <div className="mb-4 p-3 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/20">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              No AI comment generated yet
-            </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => regenerateCommentMutation.mutate()}
-              disabled={isRegenerating}
-            >
-              <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isRegenerating ? 'animate-spin' : ''}`} />
-              Generate
-            </Button>
-          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            AI comments will be generated when posts are fetched
+          </p>
         </div>
       )}
 

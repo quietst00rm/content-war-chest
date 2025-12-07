@@ -50,120 +50,24 @@ interface FollowedProfile {
   name: string | null;
 }
 
-// New AI comment response structure (single comment)
 interface AICommentResponse {
-  comment: string;
-  approach: 'micro' | 'reaction' | 'opinion' | 'question' | 'support' | 'disagree';
-  tone_matched: 'casual' | 'professional' | 'playful' | 'empathetic';
-  char_count: number;
-  reasoning: string;
-  generated_at: string;
-  attempts?: number;
-  validation_warnings?: string[];
+  comments: Array<{
+    type: 'experience' | 'value-add' | 'question';
+    text: string;
+  }>;
 }
 
-// ============================================================================
-// BANNED PHRASES LIST (for inline generation)
-// ============================================================================
-
-const BANNED_PHRASES = [
-  "this resonates", "this really resonates", "game-changer", "game changer",
-  "couldn't agree more", "i'd also highlight", "building on your point",
-  "that's fantastic", "what you're touching on is", "to add to this",
-  "i've definitely experienced", "in my experience", "as a ",
-  "i'm curious if", "it's wild how far", "great breakdown", "powerful insights",
-  "this is gold", "spot on as always", "great post", "love this post",
-  "what a great point", "so true", "this hit home", "so important",
-  "key takeaway", "absolutely agree", "definitely agree", "certainly agree",
-  "well articulated", "brilliantly put", "beautifully written",
-  "this is so insightful", "what a wonderful", "we tested this", "we tried this",
-  "in my role as", "speaking as a", "i can say that",
-];
-
-// ============================================================================
-// SYSTEM PROMPT FOR INLINE GENERATION
-// ============================================================================
-
-const SYSTEM_PROMPT = `You are generating a single LinkedIn comment that sounds authentically human.
-
-## ANALYZE THE POST FIRST
-Classify the post type (observation, vulnerable-story, educational, promotional, thank-you, question, celebration) and energy (casual, professional, vulnerable, punchy, playful, serious).
-
-## LENGTH DISTRIBUTION (CRITICAL)
-- 50% MICRO (under 50 chars): "Exactly.", "This is it.", "Ha, same.", "Nailed it."
-- 30% SHORT (50-100 chars): One sentence reactions
-- 15% MEDIUM (100-200 chars): 1-2 sentences
-- 5% LONG (200+ chars): Only for educational deep-dives
-
-## APPROACH (pick ONE)
-- "micro": 1-10 words
-- "reaction": 1-2 sentences acknowledging content
-- "opinion": Brief personal take WITHOUT fabricating experience
-- "question": Short question under 10 words
-- "support": Brief congratulations
-- "disagree": Polite pushback
-
-## HARD RULES
-NEVER USE: "This resonates", "Game-changer", "Couldn't agree more", "Great post", "I'd also highlight", "As a [role]", "I'm curious if", "In my experience" (when fabricating)
-
-NEVER: Claim experiences you didn't have, use "we" for business activities, invent timelines, claim metrics/results
-
-USE THESE: "Exactly.", "Spot on.", "This is it.", "Ha, same.", "Nailed it.", "100%", "Love it.", "Truth.", "[Name] - yep."
-
-## OUTPUT (JSON only)
-{
-  "comment": "The comment text",
-  "approach": "micro|reaction|opinion|question|support|disagree",
-  "tone_matched": "casual|professional|playful|empathetic",
-  "char_count": 45,
-  "reasoning": "Brief note"
-}`;
-
-// ============================================================================
-// VALIDATION FUNCTIONS
-// ============================================================================
-
-function containsBannedPhrase(comment: string): boolean {
-  const lowerComment = comment.toLowerCase();
-  return BANNED_PHRASES.some(phrase => lowerComment.includes(phrase.toLowerCase()));
-}
-
-function hasFabricatedExperience(comment: string): boolean {
-  const patterns = [
-    /we (did|tried|tested|saw|experienced|implemented|launched|built)/i,
-    /i (did|tried|tested|saw|experienced|implemented|launched|built) this/i,
-    /(last|this) (week|month|quarter|year)/i,
-    /\d+ (months?|weeks?|years?) ago/i,
-    /increased .* by \d+%/i,
-    /as a \w+,? i/i,
-  ];
-  return patterns.some(p => p.test(comment));
-}
-
-function validateComment(comment: string): boolean {
-  return !containsBannedPhrase(comment) && !hasFabricatedExperience(comment);
-}
-
-// ============================================================================
-// AI COMMENT GENERATION (NEW SINGLE COMMENT APPROACH)
-// ============================================================================
-
-async function generateAIComment(
+// Helper: Generate AI comments for a post
+async function generateAIComments(
   postContent: string,
-  authorName: string,
-  authorTitle: string | undefined,
   lovableApiKey: string
-): Promise<{ comment: string; approach: string; tone: string } | null> {
+): Promise<string | null> {
+  const systemPrompt = `Generate 3 human-sounding LinkedIn comments that don't start with generic phrases like "Great post" or "Love this".
+The 3 comments should be different types: one sharing a personal experience, one adding value/new information, and one asking a thoughtful question.
+Keep comments 1-3 sentences, casual but professional, using contractions.
+Return as JSON with format: {"comments": [{"type": "experience", "text": "..."}, {"type": "value-add", "text": "..."}, {"type": "question", "text": "..."}]}`;
+
   try {
-    const userPrompt = `Generate a single LinkedIn comment for this post.
-
-POST AUTHOR: ${authorName}${authorTitle ? `\nAUTHOR HEADLINE: ${authorTitle}` : ''}
-
-POST CONTENT:
-${postContent}
-
-REMEMBER: 50% should be micro (under 50 chars like "Exactly." or "This is it."), 30% short, 15% medium, 5% long. Be brief.`;
-
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -173,10 +77,9 @@ REMEMBER: 50% should be micro (under 50 chars like "Exactly." or "This is it."),
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Generate 3 LinkedIn comments for this post:\n\n${postContent}` }
         ],
-        temperature: 0.9,
         response_format: { type: 'json_object' },
       }),
     });
@@ -188,76 +91,27 @@ REMEMBER: 50% should be micro (under 50 chars like "Exactly." or "This is it."),
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
-
+    
     if (!content) {
       console.error('No content in AI response');
       return null;
     }
 
-    // Parse the JSON response
+    // Validate the JSON structure
     const parsed: AICommentResponse = JSON.parse(content);
-
-    if (!parsed.comment) {
-      console.error('Invalid AI response structure - missing comment');
+    if (!parsed.comments || !Array.isArray(parsed.comments) || parsed.comments.length !== 3) {
+      console.error('Invalid AI response structure');
       return null;
     }
 
-    // Validate the comment
-    if (!validateComment(parsed.comment)) {
-      console.warn('Comment failed validation, attempting regeneration...');
-
-      // Try once more with stricter prompt
-      const retryResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: userPrompt + '\n\nIMPORTANT: Previous attempt failed. Generate a VERY SHORT comment (under 50 chars). Use phrases like "Exactly.", "This is it.", "Nailed it.", "Love this.", or "Spot on."' }
-          ],
-          temperature: 0.7,
-          response_format: { type: 'json_object' },
-        }),
-      });
-
-      if (retryResponse.ok) {
-        const retryData = await retryResponse.json();
-        const retryContent = retryData.choices?.[0]?.message?.content;
-        if (retryContent) {
-          const retryParsed = JSON.parse(retryContent);
-          if (retryParsed.comment && validateComment(retryParsed.comment)) {
-            return {
-              comment: retryParsed.comment,
-              approach: retryParsed.approach || 'micro',
-              tone: retryParsed.tone_matched || 'casual',
-            };
-          }
-        }
-      }
-
-      // If retry also fails, return null
-      return null;
-    }
-
-    return {
-      comment: parsed.comment,
-      approach: parsed.approach || 'reaction',
-      tone: parsed.tone_matched || 'casual',
-    };
+    return content;
   } catch (error) {
-    console.error('Error generating AI comment:', error);
+    console.error('Error generating AI comments:', error);
     return null;
   }
 }
 
-// ============================================================================
-// APIFY HELPERS
-// ============================================================================
-
+// Helper: Start Apify actor run
 async function startActorRun(
   apifyToken: string,
   targetUrls: string[],
@@ -299,6 +153,7 @@ async function startActorRun(
   }
 }
 
+// Helper: Poll for Apify run status
 async function pollRunStatus(
   apifyToken: string,
   runId: string
@@ -319,6 +174,7 @@ async function pollRunStatus(
         return false;
       }
 
+      // Wait before next poll
       if (attempt < MAX_POLL_ATTEMPTS - 1) {
         await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
       }
@@ -331,6 +187,7 @@ async function pollRunStatus(
   return false;
 }
 
+// Helper: Get Apify run results
 async function getRunResults(
   apifyToken: string,
   runId: string
@@ -340,6 +197,8 @@ async function getRunResults(
   try {
     const response = await fetch(url);
     const allItems: ApifyPost[] = await response.json();
+
+    // Filter for posts only
     return allItems.filter(item => item.type === 'post');
   } catch (e) {
     console.error(`Error getting results: ${e}`);
@@ -347,10 +206,7 @@ async function getRunResults(
   }
 }
 
-// ============================================================================
-// UTILITY HELPERS
-// ============================================================================
-
+// Helper: Calculate days ago from a date
 function calculateDaysAgo(dateString: string | undefined): number {
   if (!dateString) return 0;
 
@@ -366,17 +222,20 @@ function calculateDaysAgo(dateString: string | undefined): number {
   }
 }
 
+// Helper: Clean posted ago text
 function cleanPostedAgoText(text: string | undefined): string {
   if (!text) return '';
   return text.split('•')[0].trim();
 }
 
+// Helper: Find profile by LinkedIn URL
 function findProfileByUrl(
   profiles: FollowedProfile[],
   authorUrl: string | undefined
 ): FollowedProfile | undefined {
   if (!authorUrl) return undefined;
 
+  // Normalize URLs for comparison
   const normalizeUrl = (url: string) => {
     return url.toLowerCase()
       .replace(/\/$/, '')
@@ -391,10 +250,6 @@ function findProfileByUrl(
            normalizedProfileUrl.includes(normalizedAuthorUrl);
   });
 }
-
-// ============================================================================
-// MAIN HANDLER
-// ============================================================================
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -523,13 +378,6 @@ serve(async (req) => {
     let skippedCount = 0;
     let aiCommentsGenerated = 0;
 
-    // Track statistics for reporting
-    const stats = {
-      totalCharCount: 0,
-      commentCount: 0,
-      approachCounts: { micro: 0, reaction: 0, opinion: 0, question: 0, support: 0, disagree: 0 },
-    };
-
     for (const post of posts) {
       // Find matching profile
       const profile = findProfileByUrl(profiles, post.author?.linkedinUrl);
@@ -546,46 +394,26 @@ serve(async (req) => {
         continue;
       }
 
-      // Get profile image URL
+      // Get profile image URL (Apify may return it as picture or profilePicture)
       const authorImageUrl = post.author?.picture || post.author?.profilePicture || null;
 
-      // Generate AI comment if content is long enough and API key is available
+      // Generate AI comments if content is long enough and API key is available
       let aiComment: string | null = null;
-      let aiCommentApproach: string | null = null;
-      let aiCommentTone: string | null = null;
-
       if (LOVABLE_API_KEY && post.content.length >= MIN_CONTENT_LENGTH_FOR_AI) {
-        console.log(`Generating AI comment for post from ${profile.name || profile.linkedin_url}...`);
-
-        const result = await generateAIComment(
-          post.content,
-          post.author?.name || profile.name || 'Unknown',
-          post.author?.info,
-          LOVABLE_API_KEY
-        );
-
-        if (result) {
-          aiComment = result.comment;
-          aiCommentApproach = result.approach;
-          aiCommentTone = result.tone;
+        console.log(`Generating AI comments for post from ${profile.name || profile.linkedin_url}...`);
+        aiComment = await generateAIComments(post.content, LOVABLE_API_KEY);
+        if (aiComment) {
           aiCommentsGenerated++;
-
-          // Update statistics
-          stats.totalCharCount += result.comment.length;
-          stats.commentCount++;
-          if (result.approach in stats.approachCounts) {
-            stats.approachCounts[result.approach as keyof typeof stats.approachCounts]++;
-          }
-
-          console.log(`AI comment generated (${result.approach}, ${result.comment.length} chars): "${result.comment.substring(0, 50)}..."`);
+          console.log(`AI comments generated successfully`);
         } else {
-          console.log(`AI comment generation failed, saving post without comment`);
+          console.log(`AI comment generation failed, saving post without comments`);
         }
       } else if (post.content.length < MIN_CONTENT_LENGTH_FOR_AI) {
         console.log(`Skipping AI generation - content too short (${post.content.length} chars)`);
       }
 
       // Delete existing posts for this profile before inserting the new one
+      // This ensures only the latest post per profile is kept
       const { error: deleteError } = await supabase
         .from('engagement_posts')
         .delete()
@@ -616,8 +444,6 @@ serve(async (req) => {
         shares: post.engagement?.shares || 0,
         fetched_at: new Date().toISOString(),
         ai_comment: aiComment,
-        ai_comment_approach: aiCommentApproach,
-        ai_comment_tone: aiCommentTone,
         ai_comment_generated_at: aiComment ? new Date().toISOString() : null,
       };
 
@@ -639,11 +465,13 @@ serve(async (req) => {
           profileUpdates.name = post.author.name;
         }
 
+        // Get profile image URL (Apify may return it as picture or profilePicture)
         const profileImageUrl = post.author?.picture || post.author?.profilePicture;
         if (profileImageUrl) {
           profileUpdates.profile_image_url = profileImageUrl;
         }
 
+        // Get title/headline from author info
         if (post.author?.info) {
           profileUpdates.title = post.author.info;
         }
@@ -665,11 +493,7 @@ serve(async (req) => {
       .update({ last_fetched_at: new Date().toISOString() })
       .in('id', profileIds);
 
-    // Calculate final statistics
-    const avgCharCount = stats.commentCount > 0 ? Math.round(stats.totalCharCount / stats.commentCount) : 0;
-
     console.log(`Successfully saved ${savedCount} posts, skipped ${skippedCount}, AI comments generated: ${aiCommentsGenerated}`);
-    console.log(`AI Comment Stats: avg ${avgCharCount} chars, distribution:`, stats.approachCounts);
 
     return new Response(
       JSON.stringify({
@@ -679,10 +503,6 @@ serve(async (req) => {
         posts_skipped: skippedCount,
         profiles_processed: profiles.length,
         ai_comments_generated: aiCommentsGenerated,
-        ai_comment_stats: {
-          average_char_count: avgCharCount,
-          approach_distribution: stats.approachCounts,
-        },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
