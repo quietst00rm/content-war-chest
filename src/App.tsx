@@ -12,6 +12,7 @@ import Engagement from "./pages/Engagement";
 import Discovery from "./pages/Discovery";
 import NotFound from "./pages/NotFound";
 
+// Force rebuild - v2
 const queryClient = new QueryClient();
 
 const App = () => (
