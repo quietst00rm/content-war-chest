@@ -19,20 +19,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-// Approach type definitions
-type CommentApproach = 'micro' | 'reaction' | 'opinion' | 'question' | 'support' | 'disagree';
-type CommentTone = 'casual' | 'professional' | 'playful' | 'empathetic';
-
-// Approach badge styling
-const APPROACH_STYLES: Record<CommentApproach, { label: string; className: string }> = {
-  micro: { label: 'micro', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-  reaction: { label: 'reaction', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-  opinion: { label: 'opinion', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-  question: { label: 'question', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  support: { label: 'support', className: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400' },
-  disagree: { label: 'disagree', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-};
-
+// Interface matches database schema exactly (no ai_comment_approach or ai_comment_tone columns)
 export interface EngagementPost {
   id: string;
   profile_id: string;
@@ -49,8 +36,7 @@ export interface EngagementPost {
   comments: number;
   shares: number;
   ai_comment: string | null;
-  ai_comment_approach?: string | null;
-  ai_comment_tone?: string | null;
+  ai_comment_generated_at: string | null;
   is_commented: boolean;
   is_hidden: boolean;
   fetched_at: string;
@@ -65,11 +51,6 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
   const [copied, setCopied] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const queryClient = useQueryClient();
-
-  // Get approach style
-  const approachStyle = post.ai_comment_approach
-    ? APPROACH_STYLES[post.ai_comment_approach as CommentApproach] || APPROACH_STYLES.reaction
-    : null;
 
   // Mark as commented mutation
   const markCommentedMutation = useMutation({
@@ -259,11 +240,6 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
             <div className="flex items-center gap-2 text-xs text-primary">
               <Sparkles className="h-3.5 w-3.5" />
               <span className="font-medium">AI Suggestion</span>
-              {approachStyle && (
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${approachStyle.className}`}>
-                  {approachStyle.label}
-                </span>
-              )}
               <span className="text-muted-foreground">
                 {charCount} chars
               </span>
