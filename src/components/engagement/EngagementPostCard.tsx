@@ -115,16 +115,13 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
     mutationFn: async () => {
       setIsRegenerating(true);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
-
       const response = await supabase.functions.invoke('generate-engagement-comments', {
         body: {
           post_content: post.content,
           author_name: post.author_name || 'Unknown',
           author_title: post.author_title || '',
           regenerate: true,
-          previous_approach: post.ai_comment_approach,
+          previous_approach: null, // Column doesn't exist, pass null
         },
       });
 
@@ -132,13 +129,11 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
 
       const data = response.data;
 
-      // Update the post with the new comment
+      // Update the post with the new comment (only ai_comment and ai_comment_generated_at exist)
       const { error: updateError } = await supabase
         .from("engagement_posts")
         .update({
           ai_comment: data.comment,
-          ai_comment_approach: data.approach,
-          ai_comment_tone: data.tone_matched,
           ai_comment_generated_at: new Date().toISOString(),
         })
         .eq("id", post.id);
