@@ -396,21 +396,15 @@ function findProfileByUrl(
 // MAIN HANDLER
 // ============================================================================
 
+// Demo user ID for public access mode
+const DEMO_USER_ID = '34f25d5b-0fcc-4792-822b-e7b30af21dd4';
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Verify authentication
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Parse and validate input
     let body: unknown = {};
     try {
@@ -451,25 +445,36 @@ serve(async (req) => {
       console.warn('LOVABLE_API_KEY not configured - AI comment generation will be skipped');
     }
 
-    // Create authenticated Supabase client
+    // Create Supabase client with service role for database operations
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Get user from JWT
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Try to get user from JWT, fall back to demo user if in demo mode
+    let userId: string;
+    const authHeader = req.headers.get('Authorization');
+    
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+      
+      if (user && !userError) {
+        userId = user.id;
+        console.log(`Authenticated as user: ${userId}`);
+      } else {
+        // Fall back to demo user for demo mode
+        userId = DEMO_USER_ID;
+        console.log(`Using demo user: ${userId}`);
+      }
+    } else {
+      // No auth header, use demo user
+      userId = DEMO_USER_ID;
+      console.log(`No auth header, using demo user: ${userId}`);
     }
 
     // Fetch active profiles
     let profilesQuery = supabase
       .from('followed_profiles')
       .select('id, linkedin_url, name')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('is_active', true);
 
     if (profile_ids && profile_ids.length > 0) {
@@ -585,7 +590,7 @@ serve(async (req) => {
       const { error: deleteError } = await supabase
         .from('engagement_posts')
         .delete()
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('profile_id', profile.id);
 
       if (deleteError) {
@@ -595,7 +600,7 @@ serve(async (req) => {
       }
 
       const engagementPost = {
-        user_id: user.id,
+        user_id: userId,
         profile_id: profile.id,
         linkedin_post_url: post.linkedinUrl,
         linkedin_post_id: post.id || null,
