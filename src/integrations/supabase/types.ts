@@ -17,9 +17,7 @@ export type Database = {
       engagement_posts: {
         Row: {
           ai_comment: string | null
-          ai_comment_approach: string | null
           ai_comment_generated_at: string | null
-          ai_comment_tone: string | null
           author_name: string | null
           author_profile_image_url: string | null
           author_profile_url: string | null
@@ -46,9 +44,7 @@ export type Database = {
         }
         Insert: {
           ai_comment?: string | null
-          ai_comment_approach?: string | null
           ai_comment_generated_at?: string | null
-          ai_comment_tone?: string | null
           author_name?: string | null
           author_profile_image_url?: string | null
           author_profile_url?: string | null
@@ -75,9 +71,7 @@ export type Database = {
         }
         Update: {
           ai_comment?: string | null
-          ai_comment_approach?: string | null
           ai_comment_generated_at?: string | null
-          ai_comment_tone?: string | null
           author_name?: string | null
           author_profile_image_url?: string | null
           author_profile_url?: string | null
