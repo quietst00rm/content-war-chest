@@ -78,12 +78,13 @@ export const PostModal = ({
 
   const handleMarkAsUsed = async () => {
     try {
+      const currentCount = post.usage_count || 0;
       await supabase
         .from("posts")
         .update({
           is_used: !post.is_used,
           used_at: !post.is_used ? new Date().toISOString() : null,
-          usage_count: post.is_used ? Math.max(0, post.usage_count - 1) : post.usage_count + 1,
+          usage_count: post.is_used ? Math.max(0, currentCount - 1) : currentCount + 1,
         })
         .eq("id", post.id);
       onUpdate();
