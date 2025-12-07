@@ -1,4 +1,4 @@
-project_id = "qzsvcqnylqgbzdahskcm"
+project_id = "vnuexukqsfjhjthgixuh"
 
 [functions.analyze-post]
 verify_jwt = true
