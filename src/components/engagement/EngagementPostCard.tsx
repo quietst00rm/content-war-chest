@@ -94,7 +94,7 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
   // Regenerate comment mutation
   const regenerateCommentMutation = useMutation({
     mutationFn: async () => {
-      setIsRegenerating(true);
+      console.log('Starting comment regeneration for post:', post.id);
 
       const response = await supabase.functions.invoke('generate-engagement-comments', {
         body: {
@@ -102,15 +102,39 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
           author_name: post.author_name || 'Unknown',
           author_title: post.author_title || '',
           regenerate: true,
-          previous_approach: null, // Column doesn't exist, pass null
+          previous_approach: null,
         },
       });
 
-      if (response.error) throw response.error;
+      console.log('Edge function response:', response);
+
+      // Handle edge function errors
+      if (response.error) {
+        console.error('Edge function error:', response.error);
+        throw new Error(response.error.message || 'Edge function failed');
+      }
+
+      // Handle missing or invalid data
+      if (!response.data) {
+        console.error('No data returned from edge function');
+        throw new Error('No data returned from comment generation');
+      }
+
+      // Handle error in response data (edge function returned error object)
+      if (response.data.error) {
+        console.error('Error in response data:', response.data.error);
+        throw new Error(response.data.error);
+      }
+
+      // Validate we have a comment
+      if (!response.data.comment) {
+        console.error('No comment in response:', response.data);
+        throw new Error('No comment generated');
+      }
 
       const data = response.data;
 
-      // Update the post with the new comment (only ai_comment and ai_comment_generated_at exist)
+      // Update the post with the new comment
       const { error: updateError } = await supabase
         .from("engagement_posts")
         .update({
@@ -119,18 +143,25 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
         })
         .eq("id", post.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Database update error:', updateError);
+        throw updateError;
+      }
 
       return data;
     },
+    onMutate: () => {
+      setIsRegenerating(true);
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["engagement-posts"] });
-      toast.success(`New ${data.approach} comment generated`);
-      setIsRegenerating(false);
+      toast.success(`New comment generated (${data.word_count || data.char_count} ${data.word_count ? 'words' : 'chars'})`);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Regeneration error:", error);
-      toast.error("Failed to regenerate comment");
+      toast.error(error.message || "Failed to regenerate comment");
+    },
+    onSettled: () => {
       setIsRegenerating(false);
     },
   });

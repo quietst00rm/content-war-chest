@@ -50,77 +50,112 @@ interface FollowedProfile {
   name: string | null;
 }
 
-// New AI comment response structure (single comment)
+// New AI comment response structure (Joe Nilsen voice)
 interface AICommentResponse {
   comment: string;
-  approach: 'micro' | 'reaction' | 'opinion' | 'question' | 'support' | 'disagree';
-  tone_matched: 'casual' | 'professional' | 'playful' | 'empathetic';
+  approach: 'standard' | 'perspective' | 'deep-analysis' | 'disagreement';
+  tone_matched: 'measured' | 'analytical' | 'pragmatic' | 'resigned';
   char_count: number;
+  word_count: number;
   reasoning: string;
-  generated_at: string;
+  generated_at?: string;
   attempts?: number;
   validation_warnings?: string[];
 }
 
 // ============================================================================
-// BANNED PHRASES LIST (for inline generation)
+// BANNED PHRASES/VOCABULARY - JOE NILSEN VOICE PROFILE
 // ============================================================================
 
 const BANNED_PHRASES = [
-  "this resonates", "this really resonates", "game-changer", "game changer",
-  "couldn't agree more", "i'd also highlight", "building on your point",
-  "that's fantastic", "what you're touching on is", "to add to this",
-  "i've definitely experienced", "in my experience", "as a ",
-  "i'm curious if", "it's wild how far", "great breakdown", "powerful insights",
-  "this is gold", "spot on as always", "great post", "love this post",
-  "what a great point", "so true", "this hit home", "so important",
-  "key takeaway", "absolutely agree", "definitely agree", "certainly agree",
-  "well articulated", "brilliantly put", "beautifully written",
-  "this is so insightful", "what a wonderful", "we tested this", "we tried this",
-  "in my role as", "speaking as a", "i can say that",
+  // Corporate jargon
+  "synergy", "leverage", "best practices", "paradigm", "pivot", "ecosystem",
+  "bandwidth", "circle back", "touch base", "move the needle", "low-hanging fruit",
+  // Hype language
+  "breaking", "game-changer", "game changer", "revolutionary", "unprecedented",
+  "mind-blowing", "mind blowing", "insane", "literally", "amazing", "incredible",
+  "awesome", "just dropped", "you need to see this",
+  // Empty praise
+  "great post", "love this post", "love this", "great breakdown", "powerful insights",
+  "this is gold", "this resonates", "this really resonates", "couldn't agree more",
+  "so true", "so important", "absolutely agree", "definitely agree", "certainly agree",
+  "what a great point", "well articulated", "brilliantly put", "beautifully written",
+  "that's fantastic",
+  // AI-sounding phrases
+  "i'd also highlight", "building on your point", "what you're touching on is",
+  "to add to this", "i've definitely experienced", "in my experience", "as a ",
+  "i'm curious if", "it's wild how far", "spot on as always", "this hit home",
+  "key takeaway", "this is so insightful", "what a wonderful", "in my role as",
+  "speaking as a", "i can say that", "we tested this", "we tried this",
 ];
 
+// Only these 4 emojis are allowed, and only at the END of ~10% of comments
+const APPROVED_EMOJIS = ["💯", "🔥", "🤙", "🙌"];
+
 // ============================================================================
-// SYSTEM PROMPT FOR INLINE GENERATION
+// SYSTEM PROMPT FOR INLINE GENERATION - JOE NILSEN VOICE PROFILE
 // ============================================================================
 
-const SYSTEM_PROMPT = `You are generating a single LinkedIn comment that sounds authentically human.
+const SYSTEM_PROMPT = `You are a LinkedIn comment generator that writes comments in the authentic voice of Joe Nilsen - a battle-hardened e-commerce entrepreneur with 15+ years of experience, deep expertise in Amazon operations, AI/technology, and business strategy.
 
-## ANALYZE THE POST FIRST
-Classify the post type (observation, vulnerable-story, educational, promotional, thank-you, question, celebration) and energy (casual, professional, vulnerable, punchy, playful, serious).
+## ABSOLUTE RULES (NEVER VIOLATE)
 
-## LENGTH DISTRIBUTION (CRITICAL)
-- 50% MICRO (under 50 chars): "Exactly.", "This is it.", "Ha, same.", "Nailed it."
-- 30% SHORT (50-100 chars): One sentence reactions
-- 15% MEDIUM (100-200 chars): 1-2 sentences
-- 5% LONG (200+ chars): Only for educational deep-dives
+1. **NEVER use exclamation points.** Replace all with periods.
+2. **NEVER ask questions.** Rephrase as statements. Instead of "Have you considered X?" write "Worth considering X."
+3. **NEVER write comments under 15 words.** Target range is 20-40 words.
+4. **NEVER use ellipses (...)** for dramatic effect.
+5. **NEVER use corporate jargon:** synergy, leverage, best practices, paradigm, pivot, ecosystem, bandwidth, circle back, touch base, move the needle, low-hanging fruit.
+6. **NEVER use hype language:** game-changer, revolutionary, unprecedented, mind-blowing, amazing, incredible, awesome.
+7. **NEVER give empty praise.** Every comment must add specific insight.
 
-## APPROACH (pick ONE)
-- "micro": 1-10 words
-- "reaction": 1-2 sentences acknowledging content
-- "opinion": Brief personal take WITHOUT fabricating experience
-- "question": Short question under 10 words
-- "support": Brief congratulations
-- "disagree": Polite pushback
+## EMOJI RULES
+- Use emojis in approximately 10% of comments only.
+- When used, place at the very END of the comment.
+- Only use these: 💯 🔥 🤙 🙌
+- Default to no emoji.
 
-## HARD RULES
-NEVER USE: "This resonates", "Game-changer", "Couldn't agree more", "Great post", "I'd also highlight", "As a [role]", "I'm curious if", "In my experience" (when fabricating)
+## COMMENT LENGTH GUIDELINES
+- Standard engagement: 20-40 words (default)
+- Adding perspective: 40-60 words
+- Deep analysis: 60-100 words (only for complex topics)
 
-NEVER: Claim experiences you didn't have, use "we" for business activities, invent timelines, claim metrics/results
+## VOICE CHARACTERISTICS
+Joe Nilsen is:
+- Pragmatic realist with earned wisdom (not performative cynicism)
+- Anti-hype, pro-fundamentals
+- Systems thinker who traces incentive structures
+- Direct and measured, never effusive
+- Darkly humorous and self-deprecating
 
-USE THESE: "Exactly.", "Spot on.", "This is it.", "Ha, same.", "Nailed it.", "100%", "Love it.", "Truth.", "[Name] - yep."
+## VOCABULARY TO USE
+- Casual praise: "diesel", "wild", "nuts", "dope", "foul", "beast", "legit"
+- Systems thinking: "incentive structure", "the mechanics", "trace the numbers", "at scale"
+- Connectors: "man", "look", "the thing is", "at the end of the day", "it is what it is"
+
+## OPENING PATTERNS
+- Direct Name Address: "Max having been around for some time now and seeing the pattern play out..."
+- Direct Assertion: "This is the most accurate breakdown I've seen on this topic."
+- Observation-First: "Platform dynamics are shifting faster than most operators realize."
+
+## CLOSING PATTERNS
+End with definitive statements:
+- "...few and far between, though."
+- "...it is what it is."
+- "...that's the real takeaway here."
+- "...the mechanics tell the real story."
 
 ## OUTPUT (JSON only)
 {
-  "comment": "The comment text",
-  "approach": "micro|reaction|opinion|question|support|disagree",
-  "tone_matched": "casual|professional|playful|empathetic",
-  "char_count": 45,
-  "reasoning": "Brief note"
+  "comment": "The comment text following all rules above",
+  "approach": "standard|perspective|deep-analysis|disagreement",
+  "tone_matched": "measured|analytical|pragmatic|resigned",
+  "char_count": 150,
+  "word_count": 28,
+  "reasoning": "Brief note on why this approach was chosen"
 }`;
 
 // ============================================================================
-// VALIDATION FUNCTIONS
+// VALIDATION FUNCTIONS - JOE NILSEN VOICE RULES
 // ============================================================================
 
 function containsBannedPhrase(comment: string): boolean {
@@ -128,24 +163,66 @@ function containsBannedPhrase(comment: string): boolean {
   return BANNED_PHRASES.some(phrase => lowerComment.includes(phrase.toLowerCase()));
 }
 
-function hasFabricatedExperience(comment: string): boolean {
-  const patterns = [
-    /we (did|tried|tested|saw|experienced|implemented|launched|built)/i,
-    /i (did|tried|tested|saw|experienced|implemented|launched|built) this/i,
-    /(last|this) (week|month|quarter|year)/i,
-    /\d+ (months?|weeks?|years?) ago/i,
-    /increased .* by \d+%/i,
-    /as a \w+,? i/i,
-  ];
-  return patterns.some(p => p.test(comment));
+function hasExclamationPoint(comment: string): boolean {
+  return comment.includes('!');
 }
 
-function validateComment(comment: string): boolean {
-  return !containsBannedPhrase(comment) && !hasFabricatedExperience(comment);
+function hasQuestion(comment: string): boolean {
+  return comment.includes('?');
+}
+
+function hasEllipsis(comment: string): boolean {
+  return comment.includes('...');
+}
+
+function getWordCount(comment: string): number {
+  return comment.trim().split(/\s+/).filter(word => word.length > 0).length;
+}
+
+function hasInvalidEmoji(comment: string): boolean {
+  const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu;
+  const emojis = comment.match(emojiRegex) || [];
+
+  if (emojis.length === 0) return false;
+  if (emojis.length > 1) return true;
+
+  const emoji = emojis[0];
+  if (!APPROVED_EMOJIS.includes(emoji)) return true;
+
+  const trimmedComment = comment.trim();
+  if (!trimmedComment.endsWith(emoji)) return true;
+
+  return false;
+}
+
+function validateComment(comment: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (hasExclamationPoint(comment)) {
+    errors.push("Contains exclamation point");
+  }
+  if (hasQuestion(comment)) {
+    errors.push("Contains question mark");
+  }
+  const wordCount = getWordCount(comment);
+  if (wordCount < 15) {
+    errors.push(`Only ${wordCount} words - minimum is 15`);
+  }
+  if (hasEllipsis(comment)) {
+    errors.push("Contains ellipsis");
+  }
+  if (containsBannedPhrase(comment)) {
+    errors.push("Contains banned phrase");
+  }
+  if (hasInvalidEmoji(comment)) {
+    errors.push("Invalid emoji usage");
+  }
+
+  return { valid: errors.length === 0, errors };
 }
 
 // ============================================================================
-// AI COMMENT GENERATION (NEW SINGLE COMMENT APPROACH)
+// AI COMMENT GENERATION - JOE NILSEN VOICE
 // ============================================================================
 
 async function generateAIComment(
@@ -153,16 +230,23 @@ async function generateAIComment(
   authorName: string,
   authorTitle: string | undefined,
   lovableApiKey: string
-): Promise<{ comment: string; approach: string; tone: string } | null> {
+): Promise<{ comment: string; approach: string; tone: string; wordCount: number } | null> {
   try {
-    const userPrompt = `Generate a single LinkedIn comment for this post.
+    const userPrompt = `Generate a single LinkedIn comment in Joe Nilsen's voice for this post.
 
-POST AUTHOR: ${authorName}${authorTitle ? `\nAUTHOR HEADLINE: ${authorTitle}` : ''}
+**Post Author Name:** ${authorName}
+**Post Author Title:** ${authorTitle || 'Not specified'}
 
-POST CONTENT:
+**Post Content:**
 ${postContent}
 
-REMEMBER: 50% should be micro (under 50 chars like "Exactly." or "This is it."), 30% short, 15% medium, 5% long. Be brief.`;
+**CRITICAL REMINDERS:**
+- Minimum 15 words, target 20-40 words for standard comments
+- NO exclamation points (use periods instead)
+- NO questions (rephrase as statements)
+- NO ellipses for dramatic effect
+- Emoji only at the very end, only in ~10% of comments, only these: 💯 🔥 🤙 🙌
+- Must sound like Joe Nilsen - battle-hardened e-commerce entrepreneur, anti-hype, systems thinker`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -203,10 +287,11 @@ REMEMBER: 50% should be micro (under 50 chars like "Exactly." or "This is it."),
     }
 
     // Validate the comment
-    if (!validateComment(parsed.comment)) {
-      console.warn('Comment failed validation, attempting regeneration...');
+    const validation = validateComment(parsed.comment);
+    if (!validation.valid) {
+      console.warn('Comment failed validation:', validation.errors);
 
-      // Try once more with stricter prompt
+      // Try once more with stricter prompt including validation feedback
       const retryResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -217,7 +302,7 @@ REMEMBER: 50% should be micro (under 50 chars like "Exactly." or "This is it."),
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: userPrompt + '\n\nIMPORTANT: Previous attempt failed. Generate a VERY SHORT comment (under 50 chars). Use phrases like "Exactly.", "This is it.", "Nailed it.", "Love this.", or "Spot on."' }
+            { role: 'user', content: userPrompt + `\n\n**PREVIOUS ATTEMPT FAILED VALIDATION:** ${validation.errors.join(', ')}. Please fix these issues and generate a new comment.` }
           ],
           temperature: 0.7,
           response_format: { type: 'json_object' },
@@ -229,24 +314,27 @@ REMEMBER: 50% should be micro (under 50 chars like "Exactly." or "This is it."),
         const retryContent = retryData.choices?.[0]?.message?.content;
         if (retryContent) {
           const retryParsed = JSON.parse(retryContent);
-          if (retryParsed.comment && validateComment(retryParsed.comment)) {
+          const retryValidation = validateComment(retryParsed.comment);
+          if (retryParsed.comment && retryValidation.valid) {
             return {
               comment: retryParsed.comment,
-              approach: retryParsed.approach || 'micro',
-              tone: retryParsed.tone_matched || 'casual',
+              approach: retryParsed.approach || 'standard',
+              tone: retryParsed.tone_matched || 'measured',
+              wordCount: getWordCount(retryParsed.comment),
             };
           }
         }
       }
 
-      // If retry also fails, return null
-      return null;
+      // If retry also fails, return the original comment with a warning log
+      console.warn('Retry also failed validation, returning original comment anyway');
     }
 
     return {
       comment: parsed.comment,
-      approach: parsed.approach || 'reaction',
-      tone: parsed.tone_matched || 'casual',
+      approach: parsed.approach || 'standard',
+      tone: parsed.tone_matched || 'measured',
+      wordCount: getWordCount(parsed.comment),
     };
   } catch (error) {
     console.error('Error generating AI comment:', error);
@@ -528,11 +616,12 @@ serve(async (req) => {
     let skippedCount = 0;
     let aiCommentsGenerated = 0;
 
-    // Track statistics for reporting
+    // Track statistics for reporting (Joe Nilsen voice approach types)
     const stats = {
       totalCharCount: 0,
+      totalWordCount: 0,
       commentCount: 0,
-      approachCounts: { micro: 0, reaction: 0, opinion: 0, question: 0, support: 0, disagree: 0 },
+      approachCounts: { standard: 0, perspective: 0, 'deep-analysis': 0, disagreement: 0 },
     };
 
     for (const post of posts) {
@@ -573,12 +662,13 @@ serve(async (req) => {
 
           // Update statistics
           stats.totalCharCount += result.comment.length;
+          stats.totalWordCount += result.wordCount;
           stats.commentCount++;
           if (result.approach in stats.approachCounts) {
             stats.approachCounts[result.approach as keyof typeof stats.approachCounts]++;
           }
 
-          console.log(`AI comment generated (${result.approach}, ${result.comment.length} chars): "${result.comment.substring(0, 50)}..."`);
+          console.log(`AI comment generated (${result.approach}, ${result.wordCount} words): "${result.comment.substring(0, 60)}..."`);
         } else {
           console.log(`AI comment generation failed, saving post without comment`);
         }
@@ -666,9 +756,10 @@ serve(async (req) => {
 
     // Calculate final statistics
     const avgCharCount = stats.commentCount > 0 ? Math.round(stats.totalCharCount / stats.commentCount) : 0;
+    const avgWordCount = stats.commentCount > 0 ? Math.round(stats.totalWordCount / stats.commentCount) : 0;
 
     console.log(`Successfully saved ${savedCount} posts, skipped ${skippedCount}, AI comments generated: ${aiCommentsGenerated}`);
-    console.log(`AI Comment Stats: avg ${avgCharCount} chars, distribution:`, stats.approachCounts);
+    console.log(`AI Comment Stats (Joe Nilsen voice): avg ${avgWordCount} words (${avgCharCount} chars), distribution:`, stats.approachCounts);
 
     return new Response(
       JSON.stringify({
@@ -679,6 +770,7 @@ serve(async (req) => {
         profiles_processed: profiles.length,
         ai_comments_generated: aiCommentsGenerated,
         ai_comment_stats: {
+          average_word_count: avgWordCount,
           average_char_count: avgCharCount,
           approach_distribution: stats.approachCounts,
         },
