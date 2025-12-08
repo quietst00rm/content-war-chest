@@ -229,7 +229,7 @@ async function generateAIComment(
   postContent: string,
   authorName: string,
   authorTitle: string | undefined,
-  lovableApiKey: string
+  openaiApiKey: string
 ): Promise<{ comment: string; approach: string; tone: string; wordCount: number } | null> {
   try {
     const userPrompt = `Generate a single LinkedIn comment in Joe Nilsen's voice for this post.
@@ -248,14 +248,14 @@ ${postContent}
 - Emoji only at the very end, only in ~10% of comments, only these: 💯 🔥 🤙 🙌
 - Must sound like Joe Nilsen - battle-hardened e-commerce entrepreneur, anti-hype, systems thinker`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userPrompt }
@@ -292,14 +292,14 @@ ${postContent}
       console.warn('Comment failed validation:', validation.errors);
 
       // Try once more with stricter prompt including validation feedback
-      const retryResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const retryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
+          'Authorization': `Bearer ${openaiApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
+          model: 'gpt-4o',
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: userPrompt + `\n\n**PREVIOUS ATTEMPT FAILED VALIDATION:** ${validation.errors.join(', ')}. Please fix these issues and generate a new comment.` }
@@ -519,7 +519,7 @@ serve(async (req) => {
     const APIFY_API_KEY = Deno.env.get('APIFY_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
     if (!APIFY_API_KEY) {
       throw new Error('APIFY_API_KEY is not configured');
@@ -529,8 +529,8 @@ serve(async (req) => {
       throw new Error('Supabase configuration missing');
     }
 
-    if (!LOVABLE_API_KEY) {
-      console.warn('LOVABLE_API_KEY not configured - AI comment generation will be skipped');
+    if (!OPENAI_API_KEY) {
+      console.warn('OPENAI_API_KEY not configured - AI comment generation will be skipped');
     }
 
     // Create Supabase client with service role for database operations
@@ -646,14 +646,14 @@ serve(async (req) => {
       // Generate AI comment if content is long enough and API key is available
       let aiComment: string | null = null;
 
-      if (LOVABLE_API_KEY && post.content.length >= MIN_CONTENT_LENGTH_FOR_AI) {
+      if (OPENAI_API_KEY && post.content.length >= MIN_CONTENT_LENGTH_FOR_AI) {
         console.log(`Generating AI comment for post from ${profile.name || profile.linkedin_url}...`);
 
         const result = await generateAIComment(
           post.content,
           post.author?.name || profile.name || 'Unknown',
           post.author?.info,
-          LOVABLE_API_KEY
+          OPENAI_API_KEY
         );
 
         if (result) {
