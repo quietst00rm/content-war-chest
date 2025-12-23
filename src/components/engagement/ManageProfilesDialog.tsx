@@ -63,7 +63,7 @@ export const ManageProfilesDialog = ({
     mutationFn: async (url: string) => {
       // Validate URL format
       if (!url.includes("linkedin.com/in/") && !url.includes("linkedin.com/company/")) {
-        throw new Error("Please enter a valid LinkedIn profile URL");
+        throw new Error("Please enter a valid LinkedIn profile URL (must contain 'linkedin.com/in/' or 'linkedin.com/company/')");
       }
 
       const { error } = await supabase.from("target_profiles").insert({
@@ -72,10 +72,14 @@ export const ManageProfilesDialog = ({
       });
 
       if (error) {
+        console.error("Error adding profile:", error.code, error.message);
         if (error.code === "23505") {
           throw new Error("This profile is already in your list");
         }
-        throw error;
+        if (error.message.includes("does not exist") || error.code === "42P01") {
+          throw new Error("Database migration not applied. Please run the migration in your Supabase dashboard.");
+        }
+        throw new Error(`Failed to add profile: ${error.message}`);
       }
     },
     onSuccess: () => {
@@ -93,7 +97,7 @@ export const ManageProfilesDialog = ({
   const bulkImportMutation = useMutation({
     mutationFn: async (urls: string[]) => {
       setBulkProgress(0);
-      setBulkStatus("Adding profiles...");
+      setBulkStatus("Validating URLs...");
 
       // First, add all profiles to the database
       const validUrls = urls.filter(url =>
@@ -101,13 +105,32 @@ export const ManageProfilesDialog = ({
       );
 
       if (validUrls.length === 0) {
-        throw new Error("No valid LinkedIn profile URLs found");
+        throw new Error("No valid LinkedIn profile URLs found. URLs must contain 'linkedin.com/in/' or 'linkedin.com/company/'");
+      }
+
+      // Test if table exists by trying to select from it
+      setBulkStatus("Checking database...");
+      const { error: tableCheckError } = await supabase
+        .from("target_profiles")
+        .select("id")
+        .limit(1);
+
+      if (tableCheckError) {
+        console.error("Table check error:", tableCheckError);
+        if (tableCheckError.message.includes("does not exist") || tableCheckError.code === "42P01") {
+          throw new Error("Database migration not applied. Please run the migration '20251223100000_content_war_chest_revamp.sql' in your Supabase dashboard.");
+        }
       }
 
       let addedCount = 0;
       let skippedCount = 0;
+      let errorCount = 0;
+      let lastError: string | null = null;
 
-      for (const url of validUrls) {
+      setBulkStatus("Adding profiles...");
+
+      for (let i = 0; i < validUrls.length; i++) {
+        const url = validUrls[i];
         const { error } = await supabase.from("target_profiles").insert({
           linkedin_url: url.trim(),
           is_active: true,
@@ -117,13 +140,26 @@ export const ManageProfilesDialog = ({
           if (error.code === "23505") {
             skippedCount++;
           } else {
-            console.error("Error adding profile:", error);
+            errorCount++;
+            lastError = error.message;
+            console.error(`Error adding profile ${i + 1}/${validUrls.length}:`, error.code, error.message);
           }
         } else {
           addedCount++;
         }
 
-        setBulkProgress(((addedCount + skippedCount) / validUrls.length) * 50);
+        setBulkProgress(((i + 1) / validUrls.length) * 50);
+        setBulkStatus(`Adding profiles... (${i + 1}/${validUrls.length}) - ${addedCount} added, ${skippedCount} duplicates`);
+      }
+
+      // If all failed with errors (not duplicates), throw with detailed message
+      if (addedCount === 0 && skippedCount === 0 && errorCount > 0) {
+        throw new Error(`Failed to add all ${errorCount} profiles. Last error: ${lastError}`);
+      }
+
+      // If some failed, log summary
+      if (errorCount > 0) {
+        console.warn(`Bulk import: ${addedCount} added, ${skippedCount} duplicates, ${errorCount} errors. Last error: ${lastError}`);
       }
 
       // Now fetch posts to get profile info
@@ -144,6 +180,7 @@ export const ManageProfilesDialog = ({
       return {
         added: addedCount,
         skipped: skippedCount,
+        errors: errorCount,
         postsFetched: data?.posts_saved || 0,
       };
     },
