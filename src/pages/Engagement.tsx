@@ -1,98 +1,111 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useUser } from "@/contexts/UserContext";
+import { Navigation, MobileBottomNav } from "@/components/Navigation";
+import { EngagementPostCard } from "@/components/engagement/EngagementPostCard";
+import { ManageProfilesDialog } from "@/components/engagement/ManageProfilesDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { EngagementPostCard, EngagementPost } from "@/components/engagement/EngagementPostCard";
-import { ManageProfilesDialog } from "@/components/engagement/ManageProfilesDialog";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
-import {
-  RefreshCw,
-  Users,
-  User,
-  LogOut,
-  ArrowLeft,
-  Loader2,
-  Inbox,
-  CheckCircle,
-  Filter,
-} from "lucide-react";
-import { Link } from "react-router-dom";
+import { RefreshCw, Users, Loader2, Inbox, Clock, CheckCircle } from "lucide-react";
 
-type FilterTab = "all" | "pending" | "done";
+export interface TargetProfile {
+  id: string;
+  linkedin_url: string;
+  name: string | null;
+  title: string | null;
+  avatar_url: string | null;
+  is_active: boolean;
+  last_fetched_at: string | null;
+  created_at: string;
+}
+
+export interface EngagementPost {
+  id: string;
+  target_profile_id: string;
+  linkedin_post_url: string;
+  content: string;
+  posted_at: string | null;
+  fetched_at: string;
+  is_expired: boolean;
+  created_at: string;
+  // Joined data
+  author_name?: string | null;
+  author_title?: string | null;
+  author_avatar?: string | null;
+  author_linkedin_url?: string | null;
+}
+
+export interface CommentOption {
+  id: string;
+  engagement_post_id: string;
+  option_number: number;
+  comment_text: string;
+  approach_type: "specific_detail" | "hidden_dynamic" | "practical_implication";
+  claimed_by: string | null;
+  claimed_at: string | null;
+  created_at: string;
+}
+
+type FilterTab = "active" | "expired";
 
 const Engagement = () => {
-  const { user, signOut } = useAuth();
+  const { currentUser } = useUser();
   const queryClient = useQueryClient();
   const [showManageProfiles, setShowManageProfiles] = useState(false);
-  const [filterTab, setFilterTab] = useState<FilterTab>("pending");
-  const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
+  const [filterTab, setFilterTab] = useState<FilterTab>("active");
 
-  // Fetch engagement posts
+  // Fetch engagement posts from the view
   const { data: posts = [], isLoading: postsLoading } = useQuery({
-    queryKey: ["engagement-posts", filterTab, selectedProfile],
+    queryKey: ["engagement-posts", filterTab],
     queryFn: async () => {
-      let query = supabase
-        .from("engagement_posts")
+      const { data, error } = await supabase
+        .from("engagement_posts_with_profile")
         .select("*")
-        .eq("is_hidden", false)
-        .order("days_ago", { ascending: true })
-        .order("fetched_at", { ascending: false });
+        .eq("is_expired", filterTab === "expired")
+        .order("posted_at", { ascending: false });
 
-      if (filterTab === "pending") {
-        query = query.eq("is_commented", false);
-      } else if (filterTab === "done") {
-        query = query.eq("is_commented", true);
-      }
-
-      if (selectedProfile) {
-        query = query.eq("profile_id", selectedProfile);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data as EngagementPost[];
     },
   });
 
-  // Fetch followed profiles for filter
+  // Fetch target profiles
   const { data: profiles = [] } = useQuery({
-    queryKey: ["followed-profiles"],
+    queryKey: ["target-profiles"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("followed_profiles")
-        .select("id, name, linkedin_url")
+        .from("target_profiles")
+        .select("*")
         .eq("is_active", true)
         .order("name", { ascending: true });
+
       if (error) throw error;
-      return data;
+      return data as TargetProfile[];
     },
   });
 
   // Fetch posts mutation
   const fetchPostsMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("fetch-engagement-posts", {
-        body: { max_posts_per_profile: 1 },
-      });
+      const { data, error } = await supabase.functions.invoke(
+        "fetch-engagement-posts",
+        {
+          body: { max_posts_per_profile: 1 },
+        }
+      );
 
       if (error) throw error;
       return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["engagement-posts"] });
-      queryClient.invalidateQueries({ queryKey: ["followed-profiles"] });
-      toast.success(`Fetched ${data.posts_saved} new posts from ${data.profiles_processed} profiles`);
+      queryClient.invalidateQueries({ queryKey: ["target-profiles"] });
+      toast.success(
+        `Fetched ${data.posts_saved || 0} new posts from ${data.profiles_processed || 0} profiles`
+      );
     },
     onError: (error: Error) => {
       console.error("Fetch error:", error);
@@ -101,53 +114,16 @@ const Engagement = () => {
   });
 
   // Count stats
-  const pendingCount = posts.filter(p => !p.is_commented).length;
-  const doneCount = posts.filter(p => p.is_commented).length;
-
-  // Extract username from LinkedIn URL
-  const extractUsername = (url: string): string => {
-    const match = url.match(/linkedin\.com\/(?:in|company)\/([^/?]+)/);
-    return match ? match[1] : url;
-  };
+  const activeCount = posts.filter((p) => !p.is_expired).length;
+  const expiredCount = posts.filter((p) => p.is_expired).length;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header - Sticky on mobile */}
-      <header className="sticky top-0 z-50 h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-4">
-        <div className="flex items-center gap-3">
-          <Link to="/">
-            <Button variant="ghost" size="icon" className="h-9 w-9">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <h1 className="text-lg font-semibold">Engagement Feed</h1>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
-                <User className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem disabled className="text-xs text-muted-foreground truncate">
-                {user?.email}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background flex flex-col pb-16 md:pb-0">
+      <Navigation />
 
       {/* Action Bar - Sticky below header */}
       <div className="sticky top-14 z-40 border-b border-border bg-background/95 backdrop-blur px-4 py-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 max-w-2xl mx-auto">
           {/* Primary Actions */}
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
@@ -160,70 +136,44 @@ const Engagement = () => {
               ) : (
                 <RefreshCw className="h-4 w-4 mr-2" />
               )}
-              Fetch Posts
+              Fetch New Posts
             </Button>
             <Button
               variant="outline"
               onClick={() => setShowManageProfiles(true)}
             >
               <Users className="h-4 w-4 mr-2" />
-              Profiles
+              <span className="hidden sm:inline">Profiles</span>
+              <Badge variant="secondary" className="ml-2">
+                {profiles.length}
+              </Badge>
             </Button>
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
+          <div className="w-full sm:w-auto sm:ml-auto">
             <Tabs
               value={filterTab}
               onValueChange={(v) => setFilterTab(v as FilterTab)}
-              className="w-full sm:w-auto"
+              className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-3 sm:w-auto">
-                <TabsTrigger value="pending" className="gap-1">
-                  <Inbox className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Pending</span>
+              <TabsList className="grid w-full grid-cols-2 sm:w-auto">
+                <TabsTrigger value="active" className="gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>Active</span>
                   <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                    {pendingCount}
+                    {filterTab === "active" ? posts.length : activeCount}
                   </Badge>
                 </TabsTrigger>
-                <TabsTrigger value="done" className="gap-1">
+                <TabsTrigger value="expired" className="gap-1.5">
                   <CheckCircle className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Done</span>
+                  <span>Expired</span>
                   <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                    {doneCount}
+                    {filterTab === "expired" ? posts.length : expiredCount}
                   </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="all" className="gap-1">
-                  All
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-
-            {/* Profile Filter */}
-            {profiles.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-9 w-9">
-                    <Filter className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => setSelectedProfile(null)}>
-                    All Profiles
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {profiles.map((profile) => (
-                    <DropdownMenuItem
-                      key={profile.id}
-                      onClick={() => setSelectedProfile(profile.id)}
-                      className={selectedProfile === profile.id ? "bg-accent" : ""}
-                    >
-                      {profile.name || extractUsername(profile.linkedin_url)}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
           </div>
         </div>
       </div>
@@ -235,13 +185,17 @@ const Engagement = () => {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : posts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="flex flex-col items-center justify-center py-12 text-center max-w-md mx-auto">
             <Inbox className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-1">No posts yet</h3>
-            <p className="text-sm text-muted-foreground mb-4 max-w-sm">
+            <h3 className="text-lg font-medium mb-1">
+              {filterTab === "active" ? "No active posts" : "No expired posts"}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
               {profiles.length === 0
                 ? "Add some LinkedIn profiles to follow, then fetch their posts."
-                : "Click 'Fetch Posts' to get the latest posts from your followed profiles."}
+                : filterTab === "active"
+                  ? "Click 'Fetch New Posts' to get the latest posts from your followed profiles."
+                  : "Posts older than 48 hours will appear here."}
             </p>
             {profiles.length === 0 && (
               <Button onClick={() => setShowManageProfiles(true)}>
@@ -253,7 +207,11 @@ const Engagement = () => {
         ) : (
           <div className="max-w-2xl mx-auto space-y-4">
             {posts.map((post) => (
-              <EngagementPostCard key={post.id} post={post} />
+              <EngagementPostCard
+                key={post.id}
+                post={post}
+                currentUserId={currentUser.id}
+              />
             ))}
           </div>
         )}
@@ -264,6 +222,9 @@ const Engagement = () => {
         open={showManageProfiles}
         onOpenChange={setShowManageProfiles}
       />
+
+      {/* Mobile Bottom Nav */}
+      <MobileBottomNav />
     </div>
   );
 };

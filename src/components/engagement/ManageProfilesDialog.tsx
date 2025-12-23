@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import type { TargetProfile } from "@/pages/Engagement";
 import {
   Dialog,
   DialogContent,
@@ -16,18 +16,9 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Plus, Trash2, User, ExternalLink, Upload, Loader2 } from "lucide-react";
-
-interface FollowedProfile {
-  id: string;
-  linkedin_url: string;
-  name: string | null;
-  notes: string | null;
-  is_active: boolean;
-  last_fetched_at: string | null;
-  created_at: string;
-}
+import { Plus, Trash2, ExternalLink, Upload, Loader2, Search } from "lucide-react";
 
 interface ManageProfilesDialogProps {
   open: boolean;
@@ -38,42 +29,45 @@ export const ManageProfilesDialog = ({
   open,
   onOpenChange,
 }: ManageProfilesDialogProps) => {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [newUrl, setNewUrl] = useState("");
-  const [newName, setNewName] = useState("");
   const [bulkUrls, setBulkUrls] = useState("");
   const [bulkProgress, setBulkProgress] = useState(0);
   const [bulkStatus, setBulkStatus] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch profiles
   const { data: profiles = [], isLoading } = useQuery({
-    queryKey: ["followed-profiles"],
+    queryKey: ["target-profiles-all"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("followed_profiles")
+        .from("target_profiles")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("name", { ascending: true });
       if (error) throw error;
-      return data as FollowedProfile[];
+      return data as TargetProfile[];
     },
     enabled: open,
   });
 
+  // Filter profiles by search
+  const filteredProfiles = profiles.filter(
+    (p) =>
+      !searchQuery ||
+      p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.linkedin_url.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Add profile mutation (single)
   const addProfileMutation = useMutation({
-    mutationFn: async ({ url, name }: { url: string; name: string }) => {
-      if (!user) throw new Error("Not authenticated");
-
+    mutationFn: async (url: string) => {
       // Validate URL format
       if (!url.includes("linkedin.com/in/") && !url.includes("linkedin.com/company/")) {
         throw new Error("Please enter a valid LinkedIn profile URL");
       }
 
-      const { error } = await supabase.from("followed_profiles").insert({
-        user_id: user.id,
+      const { error } = await supabase.from("target_profiles").insert({
         linkedin_url: url.trim(),
-        name: name.trim() || null,
         is_active: true,
       });
 
@@ -85,9 +79,9 @@ export const ManageProfilesDialog = ({
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["followed-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["target-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["target-profiles-all"] });
       setNewUrl("");
-      setNewName("");
       toast.success("Profile added");
     },
     onError: (error: Error) => {
@@ -98,8 +92,6 @@ export const ManageProfilesDialog = ({
   // Bulk import mutation
   const bulkImportMutation = useMutation({
     mutationFn: async (urls: string[]) => {
-      if (!user) throw new Error("Not authenticated");
-
       setBulkProgress(0);
       setBulkStatus("Adding profiles...");
 
@@ -116,8 +108,7 @@ export const ManageProfilesDialog = ({
       let skippedCount = 0;
 
       for (const url of validUrls) {
-        const { error } = await supabase.from("followed_profiles").insert({
-          user_id: user.id,
+        const { error } = await supabase.from("target_profiles").insert({
           linkedin_url: url.trim(),
           is_active: true,
         });
@@ -157,7 +148,8 @@ export const ManageProfilesDialog = ({
       };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["followed-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["target-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["target-profiles-all"] });
       queryClient.invalidateQueries({ queryKey: ["engagement-posts"] });
       setBulkUrls("");
 
@@ -181,13 +173,14 @@ export const ManageProfilesDialog = ({
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
       const { error } = await supabase
-        .from("followed_profiles")
+        .from("target_profiles")
         .update({ is_active: isActive })
         .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["followed-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["target-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["target-profiles-all"] });
     },
     onError: () => {
       toast.error("Failed to update profile");
@@ -198,13 +191,14 @@ export const ManageProfilesDialog = ({
   const deleteProfileMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("followed_profiles")
+        .from("target_profiles")
         .delete()
         .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["followed-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["target-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["target-profiles-all"] });
       queryClient.invalidateQueries({ queryKey: ["engagement-posts"] });
       toast.success("Profile removed");
     },
@@ -218,7 +212,7 @@ export const ManageProfilesDialog = ({
       toast.error("Please enter a LinkedIn URL");
       return;
     }
-    addProfileMutation.mutate({ url: newUrl, name: newName });
+    addProfileMutation.mutate(newUrl);
   };
 
   const handleBulkImport = () => {
@@ -246,17 +240,20 @@ export const ManageProfilesDialog = ({
     .map(url => url.trim())
     .filter(url => url.includes("linkedin.com/")).length;
 
+  // Stats
+  const activeCount = profiles.filter(p => p.is_active).length;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Manage Profiles</DialogTitle>
+          <DialogTitle>Target Profiles</DialogTitle>
         </DialogHeader>
 
         {/* Add Profile Tabs */}
         <Tabs defaultValue="single" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="single">Single</TabsTrigger>
+            <TabsTrigger value="single">Add Single</TabsTrigger>
             <TabsTrigger value="bulk">Bulk Import</TabsTrigger>
           </TabsList>
 
@@ -264,32 +261,27 @@ export const ManageProfilesDialog = ({
           <TabsContent value="single" className="space-y-3 pb-4 border-b mt-3">
             <div className="space-y-2">
               <Label htmlFor="linkedin-url">LinkedIn Profile URL</Label>
-              <Input
-                id="linkedin-url"
-                placeholder="https://linkedin.com/in/username"
-                value={newUrl}
-                onChange={(e) => setNewUrl(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddProfile()}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="linkedin-url"
+                  placeholder="https://linkedin.com/in/username"
+                  value={newUrl}
+                  onChange={(e) => setNewUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddProfile()}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleAddProfile}
+                  disabled={addProfileMutation.isPending}
+                >
+                  {addProfileMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="display-name">Display Name (optional)</Label>
-              <Input
-                id="display-name"
-                placeholder="John Smith"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddProfile()}
-              />
-            </div>
-            <Button
-              onClick={handleAddProfile}
-              disabled={addProfileMutation.isPending}
-              className="w-full"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Profile
-            </Button>
           </TabsContent>
 
           {/* Bulk Import Tab */}
@@ -339,83 +331,107 @@ export const ManageProfilesDialog = ({
                 </>
               )}
             </Button>
-            <p className="text-xs text-muted-foreground">
-              Profile names will be fetched automatically from LinkedIn
-            </p>
           </TabsContent>
         </Tabs>
 
         {/* Profile List */}
         <div className="flex-1 min-h-0">
-          <p className="text-sm text-muted-foreground mb-2">
-            {profiles.length} profile{profiles.length !== 1 ? "s" : ""}
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-muted-foreground">
+              {profiles.length} profile{profiles.length !== 1 ? "s" : ""} ({activeCount} active)
+            </p>
+          </div>
+
+          {/* Search */}
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search profiles..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
           <ScrollArea className="h-[250px] pr-4">
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Loading...
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
-            ) : profiles.length === 0 ? (
+            ) : filteredProfiles.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No profiles yet. Add some above.
+                {searchQuery ? "No profiles match your search." : "No profiles yet. Add some above."}
               </div>
             ) : (
               <div className="space-y-2">
-                {profiles.map((profile) => (
-                  <div
-                    key={profile.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border bg-card"
-                  >
-                    {/* Profile Image */}
-                    <div className="flex-shrink-0 h-10 w-10 rounded-full bg-muted overflow-hidden flex items-center justify-center">
-                      <User className="h-5 w-5 text-muted-foreground" />
-                    </div>
+                {filteredProfiles.map((profile) => {
+                  const initials = profile.name
+                    ?.split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase() || "?";
 
-                    {/* Profile Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">
-                        {profile.name || extractUsername(profile.linkedin_url)}
-                      </p>
-                      <a
-                        href={profile.linkedin_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1 mt-0.5"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <span className="truncate">{extractUsername(profile.linkedin_url)}</span>
-                        <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                      </a>
-                    </div>
+                  return (
+                    <div
+                      key={profile.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+                    >
+                      {/* Profile Image */}
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={profile.avatar_url || undefined} />
+                        <AvatarFallback>{initials}</AvatarFallback>
+                      </Avatar>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={profile.is_active}
-                        onCheckedChange={(checked) =>
-                          toggleActiveMutation.mutate({
-                            id: profile.id,
-                            isActive: checked,
-                          })
-                        }
-                        aria-label={profile.is_active ? "Disable" : "Enable"}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => {
-                          if (confirm(`Remove ${profile.name || extractUsername(profile.linkedin_url)}?`)) {
-                            deleteProfileMutation.mutate(profile.id);
+                      {/* Profile Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">
+                          {profile.name || extractUsername(profile.linkedin_url)}
+                        </p>
+                        {profile.title && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {profile.title}
+                          </p>
+                        )}
+                        <a
+                          href={profile.linkedin_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1 mt-0.5"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <span className="truncate">{extractUsername(profile.linkedin_url)}</span>
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                        </a>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={profile.is_active}
+                          onCheckedChange={(checked) =>
+                            toggleActiveMutation.mutate({
+                              id: profile.id,
+                              isActive: checked,
+                            })
                           }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                          aria-label={profile.is_active ? "Disable" : "Enable"}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            if (confirm(`Remove ${profile.name || extractUsername(profile.linkedin_url)}?`)) {
+                              deleteProfileMutation.mutate(profile.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </ScrollArea>

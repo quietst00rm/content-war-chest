@@ -1,192 +1,133 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
+import { USERS } from "@/contexts/UserContext";
+import type { EngagementPost, CommentOption } from "@/pages/Engagement";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import {
-  ExternalLink,
   Copy,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
   Check,
-  MessageCircle,
-  Heart,
-  Share2,
-  CheckCircle,
-  EyeOff,
-  User,
-  Sparkles,
   RefreshCw,
+  Clock,
+  Target,
+  Lightbulb,
+  Zap,
 } from "lucide-react";
-
-// Interface matches database schema exactly (no ai_comment_approach or ai_comment_tone columns)
-export interface EngagementPost {
-  id: string;
-  profile_id: string;
-  linkedin_post_url: string;
-  author_name: string | null;
-  author_profile_url: string | null;
-  author_profile_image_url: string | null;
-  author_title: string | null;
-  content: string;
-  posted_at: string | null;
-  posted_ago_text: string | null;
-  days_ago: number;
-  likes: number;
-  comments: number;
-  shares: number;
-  ai_comment: string | null;
-  ai_comment_generated_at: string | null;
-  is_commented: boolean;
-  is_hidden: boolean;
-  fetched_at: string;
-}
+import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
 
 interface EngagementPostCardProps {
   post: EngagementPost;
+  currentUserId: string;
 }
 
-export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
-  const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
-  const queryClient = useQueryClient();
+const APPROACH_CONFIG = {
+  specific_detail: {
+    label: "Specific Detail",
+    icon: Target,
+    color: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  },
+  hidden_dynamic: {
+    label: "Hidden Dynamic",
+    icon: Lightbulb,
+    color: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  },
+  practical_implication: {
+    label: "Practical Implication",
+    icon: Zap,
+    color: "bg-green-500/10 text-green-500 border-green-500/20",
+  },
+} as const;
 
-  // Mark as commented mutation
-  const markCommentedMutation = useMutation({
-    mutationFn: async (commented: boolean) => {
-      const { error } = await supabase
-        .from("engagement_posts")
-        .update({
-          is_commented: commented,
-          commented_at: commented ? new Date().toISOString() : null,
-        })
-        .eq("id", post.id);
+export function EngagementPostCard({
+  post,
+  currentUserId,
+}: EngagementPostCardProps) {
+  const queryClient = useQueryClient();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Fetch comment options for this post
+  const { data: commentOptions = [], isLoading: optionsLoading } = useQuery({
+    queryKey: ["comment-options", post.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("comment_options")
+        .select("*")
+        .eq("engagement_post_id", post.id)
+        .order("option_number", { ascending: true });
+
       if (error) throw error;
-    },
-    onSuccess: (_, commented) => {
-      queryClient.invalidateQueries({ queryKey: ["engagement-posts"] });
-      toast.success(commented ? "Marked as commented" : "Unmarked");
-    },
-    onError: () => {
-      toast.error("Failed to update");
+      return data as CommentOption[];
     },
   });
 
-  // Hide post mutation
-  const hideMutation = useMutation({
+  // Generate comments mutation
+  const generateMutation = useMutation({
     mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke(
+        "generate-comments",
+        {
+          body: { engagement_post_id: post.id },
+        }
+      );
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["comment-options", post.id] });
+      toast.success("Comments generated");
+    },
+    onError: (error) => {
+      console.error("Generate error:", error);
+      toast.error("Failed to generate comments");
+    },
+  });
+
+  // Claim mutation
+  const claimMutation = useMutation({
+    mutationFn: async ({
+      optionId,
+      claim,
+    }: {
+      optionId: string;
+      claim: boolean;
+    }) => {
       const { error } = await supabase
-        .from("engagement_posts")
-        .update({ is_hidden: true })
-        .eq("id", post.id);
+        .from("comment_options")
+        .update({
+          claimed_by: claim ? currentUserId : null,
+          claimed_at: claim ? new Date().toISOString() : null,
+        })
+        .eq("id", optionId);
+
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["engagement-posts"] });
-      toast.success("Post hidden");
+      queryClient.invalidateQueries({ queryKey: ["comment-options", post.id] });
     },
     onError: () => {
-      toast.error("Failed to hide post");
+      toast.error("Failed to update claim");
     },
   });
 
-  // Regenerate comment mutation
-  const regenerateCommentMutation = useMutation({
-    mutationFn: async () => {
-      console.log('Starting comment regeneration for post:', post.id);
-
-      const response = await supabase.functions.invoke('generate-engagement-comments', {
-        body: {
-          post_content: post.content,
-          author_name: post.author_name || 'Unknown',
-          author_title: post.author_title || '',
-          regenerate: true,
-          previous_approach: null,
-        },
-      });
-
-      console.log('Edge function response:', response);
-
-      // Handle edge function errors
-      if (response.error) {
-        console.error('Edge function error:', response.error);
-        throw new Error(response.error.message || 'Edge function failed');
-      }
-
-      // Handle missing or invalid data
-      if (!response.data) {
-        console.error('No data returned from edge function');
-        throw new Error('No data returned from comment generation');
-      }
-
-      // Handle error in response data (edge function returned error object)
-      if (response.data.error) {
-        console.error('Error in response data:', response.data.error);
-        throw new Error(response.data.error);
-      }
-
-      // Validate we have a comment
-      if (!response.data.comment) {
-        console.error('No comment in response:', response.data);
-        throw new Error('No comment generated');
-      }
-
-      const data = response.data;
-
-      // Update the post with the new comment
-      const { error: updateError } = await supabase
-        .from("engagement_posts")
-        .update({
-          ai_comment: data.comment,
-          ai_comment_generated_at: new Date().toISOString(),
-        })
-        .eq("id", post.id);
-
-      if (updateError) {
-        console.error('Database update error:', updateError);
-        throw updateError;
-      }
-
-      return data;
-    },
-    onMutate: () => {
-      setIsRegenerating(true);
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["engagement-posts"] });
-      toast.success(`New comment generated (${data.word_count || data.char_count} ${data.word_count ? 'words' : 'chars'})`);
-    },
-    onError: (error: Error) => {
-      console.error("Regeneration error:", error);
-      toast.error(error.message || "Failed to regenerate comment");
-    },
-    onSettled: () => {
-      setIsRegenerating(false);
-    },
-  });
-
-  const handleCopyComment = async () => {
-    if (!post.ai_comment) return;
-
+  const handleCopy = async (option: CommentOption) => {
     try {
-      await navigator.clipboard.writeText(post.ai_comment);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      toast.success("Comment copied!");
-    } catch {
-      // Fallback for older browsers
-      const textarea = document.createElement("textarea");
-      textarea.value = post.ai_comment;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      toast.success("Comment copied!");
+      await navigator.clipboard.writeText(option.comment_text);
+      setCopiedId(option.id);
+      toast.success("Comment copied to clipboard");
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      toast.error("Failed to copy");
     }
   };
 
@@ -194,175 +135,205 @@ export const EngagementPostCard = ({ post }: EngagementPostCardProps) => {
     window.open(post.linkedin_post_url, "_blank", "noopener,noreferrer");
   };
 
-  // Format time display
-  const timeDisplay = post.posted_ago_text || (post.days_ago === 0 ? "Today" : `${post.days_ago}d ago`);
+  const getTimeAgo = () => {
+    if (!post.posted_at) return "Unknown";
+    return formatDistanceToNow(new Date(post.posted_at), { addSuffix: true });
+  };
 
-  // Truncate content for preview
-  const contentPreview = post.content.length > 300 && !expanded
-    ? post.content.slice(0, 300) + "..."
-    : post.content;
+  const contentPreview =
+    post.content.length > 300 ? post.content.substring(0, 300) + "..." : post.content;
 
-  // Get character count display
-  const charCount = post.ai_comment?.length || 0;
+  const authorInitials =
+    post.author_name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase() || "?";
+
+  const getUserName = (userId: string | null) => {
+    if (!userId) return null;
+    if (userId === USERS.joe.id) return "Joe";
+    if (userId === USERS.kristen.id) return "Kristen";
+    return null;
+  };
 
   return (
-    <Card className={`p-4 transition-all ${post.is_commented ? "opacity-60 bg-muted/30" : "bg-card"}`}>
-      {/* Header: Author + Time */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 overflow-hidden flex items-center justify-center">
-            {post.author_profile_image_url ? (
-              <img
-                src={post.author_profile_image_url}
-                alt={post.author_name || "Author"}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <User className="h-5 w-5 text-primary" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="font-semibold truncate">{post.author_name || "Unknown"}</p>
-            {post.author_title && (
-              <p className="text-xs text-muted-foreground truncate">{post.author_title}</p>
-            )}
+    <Card className="overflow-hidden">
+      <CardContent className="p-0">
+        {/* Post Header */}
+        <div className="p-4 border-b border-border">
+          <div className="flex items-start gap-3">
+            <Avatar className="h-10 w-10 shrink-0">
+              <AvatarImage src={post.author_avatar || undefined} />
+              <AvatarFallback>{authorInitials}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">
+                    {post.author_name || "Unknown"}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {post.author_title || ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-xs",
+                      post.is_expired
+                        ? "bg-muted text-muted-foreground"
+                        : "bg-green-500/10 text-green-500 border-green-500/20"
+                    )}
+                  >
+                    <Clock className="h-3 w-3 mr-1" />
+                    {getTimeAgo()}
+                  </Badge>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <Badge variant="secondary" className="flex-shrink-0 text-xs">
-          {timeDisplay}
-        </Badge>
-      </div>
 
-      {/* Content */}
-      <div className="mb-3">
-        <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-          {contentPreview}
-        </p>
-        {post.content.length > 300 && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="text-xs text-primary hover:underline mt-1"
-          >
-            {expanded ? "Show less" : "Show more"}
-          </button>
-        )}
-      </div>
-
-      {/* Engagement Stats */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
-        <span className="flex items-center gap-1">
-          <Heart className="h-3.5 w-3.5" />
-          {post.likes}
-        </span>
-        <span className="flex items-center gap-1">
-          <MessageCircle className="h-3.5 w-3.5" />
-          {post.comments}
-        </span>
-        <span className="flex items-center gap-1">
-          <Share2 className="h-3.5 w-3.5" />
-          {post.shares}
-        </span>
-      </div>
-
-      {/* AI Comment Block - Single Comment */}
-      {post.ai_comment && (
-        <div className="mb-4">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2 text-xs text-primary">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span className="font-medium">AI Suggestion</span>
-              <span className="text-muted-foreground">
-                {charCount} chars
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              onClick={() => regenerateCommentMutation.mutate()}
-              disabled={isRegenerating}
+        {/* Post Content */}
+        <div className="p-4 border-b border-border">
+          <p className="text-sm whitespace-pre-wrap">
+            {isExpanded ? post.content : contentPreview}
+          </p>
+          {post.content.length > 300 && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs text-primary mt-2 flex items-center gap-1"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${isRegenerating ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
-
-          <div className="p-3 rounded-lg bg-muted/50 border border-border hover:border-primary/30 transition-colors">
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-sm leading-relaxed flex-1">{post.ai_comment}</p>
-              <Button
-                variant={copied ? "default" : "outline"}
-                size="sm"
-                className="h-11 w-11 p-0 flex-shrink-0"
-                onClick={handleCopyComment}
-              >
-                {copied ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="h-3 w-3" />
+                  Show less
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3 w-3" />
+                  Show more
+                </>
+              )}
+            </button>
+          )}
         </div>
-      )}
 
-      {/* No AI comment message */}
-      {!post.ai_comment && (
-        <div className="mb-4 p-3 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/20">
+        {/* Comment Options */}
+        <div className="p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              No AI comment generated yet
-            </p>
+            <h4 className="text-sm font-medium">Comment Options</h4>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-xs"
-              onClick={() => regenerateCommentMutation.mutate()}
-              disabled={isRegenerating}
+              onClick={() => generateMutation.mutate()}
+              disabled={generateMutation.isPending}
             >
-              <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isRegenerating ? 'animate-spin' : ''}`} />
-              Generate
+              {generateMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              {commentOptions.length === 0 ? "Generate" : "Regenerate"}
             </Button>
           </div>
+
+          {optionsLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : commentOptions.length === 0 ? (
+            <div className="text-center py-6 text-sm text-muted-foreground">
+              <p>No comments generated yet.</p>
+              <p className="text-xs mt-1">Click "Generate" to create 3 comment options.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {commentOptions.map((option) => {
+                const config = APPROACH_CONFIG[option.approach_type];
+                const Icon = config.icon;
+                const claimedByName = getUserName(option.claimed_by);
+                const isClaimedByMe = option.claimed_by === currentUserId;
+                const isClaimedByOther =
+                  option.claimed_by && !isClaimedByMe;
+
+                return (
+                  <div
+                    key={option.id}
+                    className={cn(
+                      "border rounded-lg p-3 space-y-2",
+                      isClaimedByOther && "opacity-60"
+                    )}
+                  >
+                    {/* Approach Label */}
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className={cn("text-xs", config.color)}>
+                        <Icon className="h-3 w-3 mr-1" />
+                        {config.label}
+                      </Badge>
+                      {claimedByName && (
+                        <Badge
+                          variant={isClaimedByMe ? "default" : "secondary"}
+                          className="text-xs"
+                        >
+                          {isClaimedByMe ? "You claimed" : `${claimedByName} claimed`}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Comment Text */}
+                    <p className="text-sm">{option.comment_text}</p>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopy(option)}
+                        className="flex-1 h-9"
+                      >
+                        {copiedId === option.id ? (
+                          <Check className="h-4 w-4 mr-2" />
+                        ) : (
+                          <Copy className="h-4 w-4 mr-2" />
+                        )}
+                        Copy
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleOpenPost}
+                        className="h-9"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={isClaimedByMe ? "secondary" : "default"}
+                        size="sm"
+                        onClick={() =>
+                          claimMutation.mutate({
+                            optionId: option.id,
+                            claim: !isClaimedByMe,
+                          })
+                        }
+                        disabled={
+                          claimMutation.isPending ||
+                          (isClaimedByOther && !isClaimedByMe)
+                        }
+                        className="h-9"
+                      >
+                        {isClaimedByMe ? "Unclaim" : "Claim"}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
-
-      {/* Action Buttons - Large tap targets for mobile */}
-      <div className="flex flex-col gap-2">
-        {/* Primary Action: Open Post */}
-        <Button
-          onClick={handleOpenPost}
-          size="lg"
-          className="w-full h-12 text-base font-medium"
-        >
-          <ExternalLink className="h-5 w-5 mr-2" />
-          Open Post
-        </Button>
-
-        {/* Secondary Actions */}
-        <div className="flex gap-2">
-          <Button
-            onClick={() => markCommentedMutation.mutate(!post.is_commented)}
-            variant={post.is_commented ? "secondary" : "outline"}
-            size="lg"
-            className="flex-1 h-11"
-            disabled={markCommentedMutation.isPending}
-          >
-            <CheckCircle className="h-4 w-4 mr-2" />
-            {post.is_commented ? "Done" : "Mark Done"}
-          </Button>
-
-          <Button
-            onClick={() => hideMutation.mutate()}
-            variant="ghost"
-            size="lg"
-            className="h-11 w-11 p-0"
-            disabled={hideMutation.isPending}
-          >
-            <EyeOff className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      </CardContent>
     </Card>
   );
-};
+}
