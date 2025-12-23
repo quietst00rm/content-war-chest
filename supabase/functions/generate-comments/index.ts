@@ -118,22 +118,22 @@ async function fetchWithRetry(
 }
 
 async function callAI(systemPrompt: string, userPrompt: string): Promise<string> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
-  if (!LOVABLE_API_KEY) {
-    throw new Error("LOVABLE_API_KEY is not configured");
+  if (!OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY is not configured. Add it in Supabase Dashboard > Settings > Edge Functions > Secrets");
   }
 
   const response = await fetchWithRetry(
-    "https://ai.gateway.lovable.dev/v1/chat/completions",
+    "https://api.openai.com/v1/chat/completions",
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -146,21 +146,16 @@ async function callAI(systemPrompt: string, userPrompt: string): Promise<string>
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("AI gateway error:", response.status, errorText);
+    console.error("OpenAI API error:", response.status, errorText);
 
     if (response.status === 429) {
       throw new Error("Rate limit exceeded. Please try again later.");
     }
-    if (response.status === 402) {
-      throw new Error("Payment required. Please add credits to your workspace.");
-    }
-    if (response.status === 503) {
-      throw new Error(
-        "AI service temporarily unavailable. Please try again in a moment."
-      );
+    if (response.status === 401) {
+      throw new Error("Invalid OpenAI API key.");
     }
 
-    throw new Error(`AI gateway error: ${response.status}`);
+    throw new Error(`OpenAI API error: ${response.status}`);
   }
 
   const data = await response.json();
