@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { UserToggle } from "@/components/UserToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { MessageCircle, FileText, Settings } from "lucide-react";
+import { Home, MessageCircle, FileText, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavLinkProps {
@@ -32,8 +32,14 @@ export function Navigation() {
   const currentPath = location.pathname;
 
   return (
-    <header className="sticky top-0 z-50 h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-4">
+    <header className="fixed top-0 left-0 right-0 z-50 h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-4">
       <div className="flex items-center gap-1">
+        <NavLink
+          to="/"
+          icon={<Home className="h-4 w-4" />}
+          label="Home"
+          isActive={currentPath === "/"}
+        />
         <NavLink
           to="/engagement"
           icon={<MessageCircle className="h-4 w-4" />}
@@ -70,6 +76,18 @@ export function MobileBottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
       <div className="flex items-center justify-around h-16">
+        <Link
+          to="/"
+          className={cn(
+            "flex flex-col items-center gap-1 px-4 py-2",
+            currentPath === "/"
+              ? "text-primary"
+              : "text-muted-foreground"
+          )}
+        >
+          <Home className="h-5 w-5" />
+          <span className="text-xs">Home</span>
+        </Link>
         <Link
           to="/engagement"
           className={cn(

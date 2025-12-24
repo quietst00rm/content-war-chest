@@ -2,9 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { UserProvider } from "@/contexts/UserContext";
+import Home from "./pages/Home";
 import Engagement from "./pages/Engagement";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -20,8 +21,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              {/* Default route redirects to engagement */}
-              <Route path="/" element={<Navigate to="/engagement" replace />} />
+              <Route path="/" element={<Home />} />
               <Route path="/engagement" element={<Engagement />} />
               <Route path="/settings" element={<Settings />} />
               {/* Catch-all for 404 */}
