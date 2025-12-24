@@ -439,6 +439,43 @@ async function getRunResults(
 // UTILITY HELPERS
 // ============================================================================
 
+/**
+ * Invoke the generate-comments function for a given engagement post
+ * This is called automatically after each post is saved
+ */
+async function generateCommentOptions(
+  postId: string,
+  supabaseUrl: string,
+  serviceRoleKey: string
+): Promise<void> {
+  try {
+    const functionUrl = `${supabaseUrl}/functions/v1/generate-comments`;
+    
+    const response = await fetch(functionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({
+        engagement_post_id: postId,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Failed to generate comment options for post ${postId}: ${response.status} - ${errorText}`);
+      // Don't throw - we want to continue processing other posts
+      return;
+    }
+
+    console.log(`Successfully generated comment options for post ${postId}`);
+  } catch (error) {
+    console.error(`Error invoking generate-comments for post ${postId}:`, error);
+    // Don't throw - we want to continue processing other posts
+  }
+}
+
 function calculateDaysAgo(dateString: string | undefined): number {
   if (!dateString) return 0;
 
@@ -711,15 +748,30 @@ serve(async (req) => {
       };
 
       // Insert the new post
-      const { error: insertError } = await supabase
+      const { data: insertedPost, error: insertError } = await supabase
         .from('engagement_posts')
-        .insert(engagementPost);
+        .insert(engagementPost)
+        .select('id')
+        .single();
 
       if (insertError) {
         console.error(`Error saving post: ${insertError.message}`);
         skippedCount++;
       } else {
         savedCount++;
+
+        // Automatically generate comment options for this post
+        if (insertedPost?.id) {
+          // Generate comments - await but handle errors gracefully
+          // If generation fails, post is still saved successfully
+          try {
+            await generateCommentOptions(insertedPost.id, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+          } catch (error) {
+            // Error already logged in generateCommentOptions
+            // Continue processing - post is saved, user can manually regenerate if needed
+            console.log(`Post ${insertedPost.id} saved but comment generation failed - can be regenerated manually`);
+          }
+        }
 
         // Update profile info if we discovered new data
         const profileUpdates: Record<string, string> = {};
