@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { TargetProfile } from "@/pages/Engagement";
+import { useUser } from "@/contexts/UserContext";
+import type { FollowedProfile } from "@/pages/Engagement";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ export const ManageProfilesDialog = ({
   open,
   onOpenChange,
 }: ManageProfilesDialogProps) => {
+  const { currentUser } = useUser();
   const queryClient = useQueryClient();
   const [newUrl, setNewUrl] = useState("");
   const [bulkUrls, setBulkUrls] = useState("");
@@ -38,14 +40,14 @@ export const ManageProfilesDialog = ({
 
   // Fetch profiles
   const { data: profiles = [], isLoading } = useQuery({
-    queryKey: ["target-profiles-all"],
+    queryKey: ["followed-profiles-all"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("target_profiles")
+        .from("followed_profiles")
         .select("*")
         .order("name", { ascending: true });
       if (error) throw error;
-      return data as TargetProfile[];
+      return data as FollowedProfile[];
     },
     enabled: open,
   });
@@ -66,9 +68,10 @@ export const ManageProfilesDialog = ({
         throw new Error("Please enter a valid LinkedIn profile URL (must contain 'linkedin.com/in/' or 'linkedin.com/company/')");
       }
 
-      const { error } = await supabase.from("target_profiles").insert({
+      const { error } = await supabase.from("followed_profiles").insert({
         linkedin_url: url.trim(),
         is_active: true,
+        user_id: currentUser.id,
       });
 
       if (error) {
@@ -76,15 +79,12 @@ export const ManageProfilesDialog = ({
         if (error.code === "23505") {
           throw new Error("This profile is already in your list");
         }
-        if (error.message.includes("does not exist") || error.code === "42P01") {
-          throw new Error("Database migration not applied. Please run the migration in your Supabase dashboard.");
-        }
         throw new Error(`Failed to add profile: ${error.message}`);
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["target-profiles"] });
-      queryClient.invalidateQueries({ queryKey: ["target-profiles-all"] });
+      queryClient.invalidateQueries({ queryKey: ["followed-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["followed-profiles-all"] });
       setNewUrl("");
       toast.success("Profile added");
     },
@@ -108,32 +108,18 @@ export const ManageProfilesDialog = ({
         throw new Error("No valid LinkedIn profile URLs found. URLs must contain 'linkedin.com/in/' or 'linkedin.com/company/'");
       }
 
-      // Test if table exists by trying to select from it
-      setBulkStatus("Checking database...");
-      const { error: tableCheckError } = await supabase
-        .from("target_profiles")
-        .select("id")
-        .limit(1);
-
-      if (tableCheckError) {
-        console.error("Table check error:", tableCheckError);
-        if (tableCheckError.message.includes("does not exist") || tableCheckError.code === "42P01") {
-          throw new Error("Database migration not applied. Please run the migration '20251223100000_content_war_chest_revamp.sql' in your Supabase dashboard.");
-        }
-      }
-
       let addedCount = 0;
       let skippedCount = 0;
       let errorCount = 0;
-      let lastError: string | null = null;
 
       setBulkStatus("Adding profiles...");
 
       for (let i = 0; i < validUrls.length; i++) {
         const url = validUrls[i];
-        const { error } = await supabase.from("target_profiles").insert({
+        const { error } = await supabase.from("followed_profiles").insert({
           linkedin_url: url.trim(),
           is_active: true,
+          user_id: currentUser.id,
         });
 
         if (error) {
@@ -141,7 +127,6 @@ export const ManageProfilesDialog = ({
             skippedCount++;
           } else {
             errorCount++;
-            lastError = error.message;
             console.error(`Error adding profile ${i + 1}/${validUrls.length}:`, error.code, error.message);
           }
         } else {
@@ -150,16 +135,6 @@ export const ManageProfilesDialog = ({
 
         setBulkProgress(((i + 1) / validUrls.length) * 50);
         setBulkStatus(`Adding profiles... (${i + 1}/${validUrls.length}) - ${addedCount} added, ${skippedCount} duplicates`);
-      }
-
-      // If all failed with errors (not duplicates), throw with detailed message
-      if (addedCount === 0 && skippedCount === 0 && errorCount > 0) {
-        throw new Error(`Failed to add all ${errorCount} profiles. Last error: ${lastError}`);
-      }
-
-      // If some failed, log summary
-      if (errorCount > 0) {
-        console.warn(`Bulk import: ${addedCount} added, ${skippedCount} duplicates, ${errorCount} errors. Last error: ${lastError}`);
       }
 
       // Now fetch posts to get profile info
@@ -171,7 +146,6 @@ export const ManageProfilesDialog = ({
 
       if (error) {
         console.error("Error fetching posts:", error);
-        // Don't throw - profiles are already added
       }
 
       setBulkProgress(100);
@@ -185,8 +159,8 @@ export const ManageProfilesDialog = ({
       };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["target-profiles"] });
-      queryClient.invalidateQueries({ queryKey: ["target-profiles-all"] });
+      queryClient.invalidateQueries({ queryKey: ["followed-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["followed-profiles-all"] });
       queryClient.invalidateQueries({ queryKey: ["engagement-posts"] });
       setBulkUrls("");
 
@@ -210,14 +184,14 @@ export const ManageProfilesDialog = ({
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
       const { error } = await supabase
-        .from("target_profiles")
+        .from("followed_profiles")
         .update({ is_active: isActive })
         .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["target-profiles"] });
-      queryClient.invalidateQueries({ queryKey: ["target-profiles-all"] });
+      queryClient.invalidateQueries({ queryKey: ["followed-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["followed-profiles-all"] });
     },
     onError: () => {
       toast.error("Failed to update profile");
@@ -228,14 +202,14 @@ export const ManageProfilesDialog = ({
   const deleteProfileMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("target_profiles")
+        .from("followed_profiles")
         .delete()
         .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["target-profiles"] });
-      queryClient.invalidateQueries({ queryKey: ["target-profiles-all"] });
+      queryClient.invalidateQueries({ queryKey: ["followed-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["followed-profiles-all"] });
       queryClient.invalidateQueries({ queryKey: ["engagement-posts"] });
       toast.success("Profile removed");
     },
@@ -415,7 +389,7 @@ export const ManageProfilesDialog = ({
                     >
                       {/* Profile Image */}
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={profile.avatar_url || undefined} />
+                        <AvatarImage src={profile.profile_image_url || undefined} />
                         <AvatarFallback>{initials}</AvatarFallback>
                       </Avatar>
 

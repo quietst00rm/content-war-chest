@@ -186,7 +186,7 @@ function hasInvalidEmoji(comment: string): boolean {
   if (emojis.length === 0) return false;
   if (emojis.length > 1) return true;
 
-  const emoji = emojis[0];
+  const emoji = emojis[0] as string;
   if (!APPROVED_EMOJIS.includes(emoji)) return true;
 
   const trimmedComment = comment.trim();

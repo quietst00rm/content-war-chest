@@ -15,7 +15,6 @@ import {
   ChevronUp,
   Loader2,
   Check,
-  RefreshCw,
   Clock,
   Target,
   Lightbulb,
@@ -66,30 +65,7 @@ export function EngagementPostCard({
         .order("option_number", { ascending: true });
 
       if (error) throw error;
-      return data as CommentOption[];
-    },
-  });
-
-  // Generate comments mutation
-  const generateMutation = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke(
-        "generate-comments",
-        {
-          body: { engagement_post_id: post.id },
-        }
-      );
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comment-options", post.id] });
-      toast.success("Comments generated");
-    },
-    onError: (error) => {
-      console.error("Generate error:", error);
-      toast.error("Failed to generate comments");
+      return data as unknown as CommentOption[];
     },
   });
 
@@ -225,19 +201,6 @@ export function EngagementPostCard({
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium">Comment Options</h4>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => generateMutation.mutate()}
-              disabled={generateMutation.isPending}
-            >
-              {generateMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              {commentOptions.length === 0 ? "Generate" : "Regenerate"}
-            </Button>
           </div>
 
           {optionsLoading ? (
@@ -247,7 +210,7 @@ export function EngagementPostCard({
           ) : commentOptions.length === 0 ? (
             <div className="text-center py-6 text-sm text-muted-foreground">
               <p>No comments generated yet.</p>
-              <p className="text-xs mt-1">Click "Generate" to create 3 comment options.</p>
+              <p className="text-xs mt-1">Comments will be generated automatically when posts are fetched.</p>
             </div>
           ) : (
             <div className="space-y-3">

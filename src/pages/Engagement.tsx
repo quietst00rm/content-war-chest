@@ -11,12 +11,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { RefreshCw, Users, Loader2, Inbox, Clock, CheckCircle } from "lucide-react";
 
-export interface TargetProfile {
+export interface FollowedProfile {
   id: string;
+  user_id: string;
   linkedin_url: string;
   name: string | null;
   title: string | null;
-  avatar_url: string | null;
+  profile_image_url: string | null;
   is_active: boolean;
   last_fetched_at: string | null;
   created_at: string;
@@ -24,14 +25,13 @@ export interface TargetProfile {
 
 export interface EngagementPost {
   id: string;
-  target_profile_id: string;
+  profile_id: string;
   linkedin_post_url: string;
   content: string;
   posted_at: string | null;
   fetched_at: string;
   is_expired: boolean;
   created_at: string;
-  // Joined data
   author_name?: string | null;
   author_title?: string | null;
   author_avatar?: string | null;
@@ -68,22 +68,22 @@ const Engagement = () => {
         .order("posted_at", { ascending: false });
 
       if (error) throw error;
-      return data as EngagementPost[];
+      return data as unknown as EngagementPost[];
     },
   });
 
-  // Fetch target profiles
+  // Fetch followed profiles
   const { data: profiles = [] } = useQuery({
-    queryKey: ["target-profiles"],
+    queryKey: ["followed-profiles"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("target_profiles")
+        .from("followed_profiles")
         .select("*")
         .eq("is_active", true)
         .order("name", { ascending: true });
 
       if (error) throw error;
-      return data as TargetProfile[];
+      return data as FollowedProfile[];
     },
   });
 
@@ -102,7 +102,7 @@ const Engagement = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["engagement-posts"] });
-      queryClient.invalidateQueries({ queryKey: ["target-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["followed-profiles"] });
       toast.success(
         `Fetched ${data.posts_saved || 0} new posts from ${data.profiles_processed || 0} profiles`
       );
