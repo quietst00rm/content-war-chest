@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      comment_options: {
+        Row: {
+          approach_type: string
+          claimed_at: string | null
+          claimed_by: string | null
+          comment_text: string
+          created_at: string
+          engagement_post_id: string
+          id: string
+          option_number: number
+        }
+        Insert: {
+          approach_type: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          comment_text: string
+          created_at?: string
+          engagement_post_id: string
+          id?: string
+          option_number: number
+        }
+        Update: {
+          approach_type?: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          comment_text?: string
+          created_at?: string
+          engagement_post_id?: string
+          id?: string
+          option_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_options_engagement_post_id_fkey"
+            columns: ["engagement_post_id"]
+            isOneToOne: false
+            referencedRelation: "engagement_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comment_options_engagement_post_id_fkey"
+            columns: ["engagement_post_id"]
+            isOneToOne: false
+            referencedRelation: "engagement_posts_with_profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       engagement_posts: {
         Row: {
           ai_comment: string | null
@@ -326,7 +374,41 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      engagement_posts_with_profile: {
+        Row: {
+          ai_comment: string | null
+          ai_comment_generated_at: string | null
+          author_avatar: string | null
+          author_linkedin_url: string | null
+          author_name: string | null
+          author_title: string | null
+          comments: number | null
+          content: string | null
+          created_at: string | null
+          fetched_at: string | null
+          id: string | null
+          is_commented: boolean | null
+          is_expired: boolean | null
+          is_hidden: boolean | null
+          likes: number | null
+          linkedin_post_url: string | null
+          posted_at: string | null
+          profile_id: string | null
+          profile_linkedin_url: string | null
+          profile_name: string | null
+          shares: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_posts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "followed_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never

@@ -1,4 +1,4 @@
-project_id = "vnuexukqsfjhjthgixuh"
+project_id = "qzsvcqnylqgbzdahskcm"
 
 [functions.analyze-post]
 verify_jwt = true
@@ -16,4 +16,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.generate-engagement-comments]
+verify_jwt = false
+
+[functions.generate-comments]
 verify_jwt = false

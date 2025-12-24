@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { UserProvider } from "@/contexts/UserContext";
 import Engagement from "./pages/Engagement";
-import Content from "./pages/Content";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -24,7 +23,6 @@ const App = () => (
               {/* Default route redirects to engagement */}
               <Route path="/" element={<Navigate to="/engagement" replace />} />
               <Route path="/engagement" element={<Engagement />} />
-              <Route path="/content" element={<Content />} />
               <Route path="/settings" element={<Settings />} />
               {/* Catch-all for 404 */}
               <Route path="*" element={<NotFound />} />

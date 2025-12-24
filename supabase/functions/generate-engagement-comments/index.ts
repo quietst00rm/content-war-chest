@@ -564,7 +564,7 @@ function hasInvalidEmoji(comment: string): { invalid: boolean; reason?: string }
   }
 
   // Rule: Only approved emojis
-  const emoji = emojis[0];
+  const emoji = emojis[0] as string;
   if (!APPROVED_EMOJIS.includes(emoji)) {
     return { invalid: true, reason: `Unapproved emoji: ${emoji}. Only use: ${APPROVED_EMOJIS.join(' ')}` };
   }
